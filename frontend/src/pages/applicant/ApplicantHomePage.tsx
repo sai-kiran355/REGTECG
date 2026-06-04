@@ -121,7 +121,7 @@ export function ApplicantHomePage() {
                 )}
                 {app.case_id && (
                   <Link
-                    to={`/apply/reupload?case=${app.case_id}&tenant=${tenantSlug}&doc=aadhaar_front`}
+                    to={`/apply/reupload?case=${app.case_id}&tenant=${tenantSlug}`}
                     className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
                   >
                     Re-upload Document

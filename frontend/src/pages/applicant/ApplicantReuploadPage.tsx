@@ -42,13 +42,17 @@ export function ApplicantReuploadPage() {
     return null
   }
 
-  if (!caseId || !docType || !DOC_LABELS[docType]) {
+  if (!caseId) {
     navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`)
     return null
   }
 
-  const label = DOC_LABELS[docType]
-  const tip = DOC_TIPS[docType]
+  // If no doc type specified, show picker
+  const [selectedDoc, setSelectedDoc] = useState(docType || '')
+  const activeDoc = selectedDoc
+
+  const label = DOC_LABELS[activeDoc] || 'Document'
+  const tip = DOC_TIPS[activeDoc] || 'Upload a clear, readable copy of your document.'
   const bankName = tenantSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +85,7 @@ export function ApplicantReuploadPage() {
       const form = new FormData()
       form.append('file', file)
       await axios.post(
-        `${BASE_URL}/api/v1/portal/reupload/${caseId}/${docType}`,
+        `${BASE_URL}/api/v1/portal/reupload/${caseId}/${activeDoc}`,
         form,
         {
           headers: {
@@ -161,6 +165,27 @@ export function ApplicantReuploadPage() {
             <p className="text-sm text-gray-500 mt-1">{tip}</p>
           </div>
 
+          {/* Document type picker — shown when not pre-selected */}
+          {!docType && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Which document to re-upload?</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(DOC_LABELS).map(([key, lbl]) => (
+                  <button key={key} type="button"
+                    onClick={() => { setSelectedDoc(key); setFile(null); setPreview(null) }}
+                    className={`rounded-xl border-2 px-4 py-3 text-sm font-medium text-left transition-colors ${
+                      activeDoc === key
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
               <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
@@ -205,7 +230,7 @@ export function ApplicantReuploadPage() {
 
           <button
             onClick={handleUpload}
-            disabled={!file || uploading}
+            disabled={!file || uploading || !activeDoc}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {uploading ? <><Spinner size="sm" /> Uploading…</> : <><Upload className="h-4 w-4" /> Submit Document</>}
