@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Download, FileText, TrendingUp, Calendar, CheckCircle } from 'lucide-react'
+import { BarChart3, Download, FileText, Calendar, CheckCircle } from 'lucide-react'
 import { Badge } from '../components/Badge'
 import { Alert } from '../components/Alert'
 import { Spinner } from '../components/Spinner'
