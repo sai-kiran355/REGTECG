@@ -117,11 +117,31 @@ async def review_kyc_record(
     status: str,
     notes: str | None = None,
 ) -> KYCRecord:
-    """Submit a review decision on a KYC record."""
+    """Submit a review decision on a KYC record.
+    
+    When status is 'verified' and record has a linked case, automatically closes the case.
+    When status is 'rejected', sets the case to closed as well.
+    """
     record.status = status
     record.reviewer_id = reviewer_id
     if notes is not None:
         record.notes = notes
     await db.flush()
+
+    # Auto-close or update the linked case based on KYC decision
+    if record.case_id is not None and status in ("verified", "rejected"):
+        from models.case import Case
+        from sqlalchemy import select as _select
+        case_result = await db.execute(
+            _select(Case).where(Case.id == record.case_id)
+        )
+        case = case_result.scalar_one_or_none()
+        if case:
+            if status == "verified":
+                case.status = "closed"
+            elif status == "rejected":
+                case.status = "closed"
+            await db.flush()
+
     await db.refresh(record)
     return record

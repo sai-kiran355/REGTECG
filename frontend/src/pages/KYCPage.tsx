@@ -30,9 +30,10 @@ export function KYCPage() {
     full_name: '', date_of_birth: '', nationality: 'US',
     document_type: 'passport', document_number: '', risk_level: 'low', notes: '',
   })
-
-  // Real counts from the API, not sliced from current page
   const [counts, setCounts] = useState({ verified: 0, in_review: 0, pending: 0, rejected: 0 })
+
+  // Confirmation dialog state
+  const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; name: string } | null>(null)
 
   const fetchRecords = () => {
     setLoading(true)
@@ -83,6 +84,48 @@ export function KYCPage() {
 
   return (
     <div className="space-y-6">
+      {/* Confirmation dialog */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="card p-6 max-w-sm w-full mx-4 space-y-4 shadow-xl">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-full mx-auto ${confirmAction.status === 'verified' ? 'bg-green-100' : 'bg-red-100'}`}>
+              {confirmAction.status === 'verified'
+                ? <CheckCircle className="h-6 w-6 text-green-600" />
+                : <XCircle className="h-6 w-6 text-red-600" />
+              }
+            </div>
+            <div className="text-center">
+              <h3 className="font-semibold text-gray-900">
+                {confirmAction.status === 'verified' ? 'Approve KYC?' : 'Reject KYC?'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {confirmAction.status === 'verified'
+                  ? `Approve KYC for ${confirmAction.name}? This will verify their identity and automatically close the case.`
+                  : `Reject KYC for ${confirmAction.name}? This will close the case as rejected.`
+                }
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmAction(null)} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleReview(confirmAction.id, confirmAction.status)
+                  setConfirmAction(null)
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${
+                  confirmAction.status === 'verified'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {confirmAction.status === 'verified' ? 'Yes, Approve' : 'Yes, Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">KYC Verification</h2>
@@ -192,8 +235,18 @@ export function KYCPage() {
                       <button onClick={() => navigate(`/kyc/${r.id}`)} className="text-xs font-medium text-brand-600 hover:text-brand-700">View</button>
                       {hasPermission('kyc:write') && r.status === 'pending' && (
                         <>
-                          <button onClick={() => handleReview(r.id, 'verified')} className="text-xs font-medium text-green-600 hover:text-green-700">Approve</button>
-                          <button onClick={() => handleReview(r.id, 'rejected')} className="text-xs font-medium text-red-600 hover:text-red-700">Reject</button>
+                          <button
+                            onClick={() => setConfirmAction({ id: r.id, status: 'verified', name: r.full_name })}
+                            className="text-xs font-medium text-green-600 hover:text-green-700"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setConfirmAction({ id: r.id, status: 'rejected', name: r.full_name })}
+                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                          >
+                            Reject
+                          </button>
                         </>
                       )}
                     </div>

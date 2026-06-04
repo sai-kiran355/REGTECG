@@ -123,7 +123,26 @@ export function CaseDetailPage() {
           {hasPermission('cases:write') && caseData.status !== 'closed' && (
             <>
               {caseData.status === 'open' && (
-                <button onClick={() => handleStatusChange('in_review')} disabled={updating} className="btn-secondary text-sm">
+                <button
+                  onClick={async () => {
+                    // Move case to in_review and navigate to KYC for this case
+                    setUpdating(true)
+                    try {
+                      await casesApi.update(caseData.id, { status: 'in_review' } as any)
+                      // Find the KYC record linked to this case and navigate there
+                      const { kycApi } = await import('../api/compliance')
+                      const kyc = await kycApi.list({ page: 1, page_size: 1 })
+                      // Navigate to KYC page filtered for this case
+                      navigate(`/kyc?case=${caseData.id}`)
+                    } catch {
+                      setError('Failed to start review.')
+                    } finally {
+                      setUpdating(false)
+                    }
+                  }}
+                  disabled={updating}
+                  className="btn-secondary text-sm"
+                >
                   {updating ? <Spinner size="sm" /> : 'Start Review'}
                 </button>
               )}
