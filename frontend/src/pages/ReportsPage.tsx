@@ -102,8 +102,15 @@ export function ReportsPage() {
       const date = new Date().toISOString().split('T')[0]
       downloadCSV(`${report.id}-${date}.csv`, rows)
       setSuccess(`${report.name} downloaded — ${rows.length - 1} records exported.`)
-    } catch {
-      setError(`Failed to generate ${report.name}. Please try again.`)
+    } catch (err: any) {
+      const status = err?.response?.status
+      if (status === 401) {
+        setError('Session expired. Please log out and log in again.')
+      } else if (status === 403) {
+        setError('You do not have permission to generate reports.')
+      } else {
+        setError(`Failed to generate ${report.name}. Please try again.`)
+      }
     } finally {
       setGenerating(null)
     }
