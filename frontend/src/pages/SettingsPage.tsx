@@ -90,17 +90,17 @@ export function SettingsPage() {
         <div className="space-y-4 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Tenant</label>
-              <input className="input" value={tenantSlug ?? ''} readOnly />
+              <label className="mb-1 block text-sm font-medium text-gray-700">Organisation</label>
+              <input className="input" value={user?.organization_name ?? ''} readOnly />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Your Role</label>
               <input className="input capitalize" value={user?.role ?? ''} readOnly />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">User ID</label>
-            <input className="input font-mono text-xs" value={user?.sub ?? ''} readOnly />
+            <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+            <input className="input" value={user?.email ?? ''} readOnly />
           </div>
         </div>
       </div>
@@ -201,20 +201,6 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Permissions */}
-      <div className="card">
-        <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4">
-          <Shield className="h-5 w-5 text-brand-600" />
-          <h3 className="font-semibold text-gray-900">Your Permissions</h3>
-        </div>
-        <div className="p-6">
-          <div className="flex flex-wrap gap-1.5">
-            {user?.permissions.map(p => (
-              <span key={p} className="rounded bg-gray-100 border border-gray-200 px-2 py-0.5 text-xs text-gray-600">{p}</span>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
