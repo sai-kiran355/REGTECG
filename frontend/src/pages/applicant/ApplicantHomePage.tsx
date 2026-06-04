@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { ShieldCheck, FileText, CheckCircle, Clock, AlertTriangle, LogOut, Plus, ArrowRight, MessageCircle, Settings } from 'lucide-react'
+import { ShieldCheck, FileText, CheckCircle, Clock, AlertTriangle, LogOut, Plus, ArrowRight, MessageCircle, Settings, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 import { useApplicantStore } from '../../store/applicantStore'
 import { Spinner } from '../../components/Spinner'
@@ -99,6 +99,38 @@ export function ApplicantHomePage() {
           <h2 className="text-2xl font-bold">{fullName}</h2>
           <p className="text-blue-100 text-sm mt-1">Track your applications and start new ones below</p>
         </div>
+
+        {/* Action Required banners for in_review applications */}
+        {apps.filter(a => a.status === 'in_review').map(app => (
+          <div key={`banner-${app.reference_number}`}
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">Action Required — {app.subject_name}</p>
+              <p className="text-sm text-amber-700 mt-0.5">
+                Your compliance officer has requested additional documents. Please check the chat and re-upload the requested file.
+              </p>
+              <div className="flex gap-2 mt-3">
+                {app.case_id && (
+                  <Link
+                    to={`/apply/chat?case=${app.case_id}&tenant=${tenantSlug}`}
+                    className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> View Message
+                  </Link>
+                )}
+                {app.case_id && (
+                  <Link
+                    to={`/apply/reupload?case=${app.case_id}&tenant=${tenantSlug}&doc=aadhaar_front`}
+                    className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                  >
+                    Re-upload Document
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
 
         {/* Quick actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

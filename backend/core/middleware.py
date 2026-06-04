@@ -147,7 +147,6 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Also exclude portal status paths with dynamic segments
         if request.url.path.startswith("/api/v1/portal/"):
             return await call_next(request)
-
         # Extract X-Tenant-ID header.
         tenant_header = request.headers.get("X-Tenant-ID", "").strip()
         if not tenant_header:

@@ -11,6 +11,7 @@ import { ApplicantSignupPage } from './pages/applicant/ApplicantSignupPage'
 import { ApplicantHomePage } from './pages/applicant/ApplicantHomePage' 
 import { ApplicantChatPage } from './pages/applicant/ApplicantChatPage'
 import { ApplicantSettingsPage } from './pages/applicant/ApplicantSettingsPage'
+import { ApplicantReuploadPage } from './pages/applicant/ApplicantReuploadPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CasesPage } from './pages/CasesPage'
 import { CaseDetailPage } from './pages/CaseDetailPage'
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/apply/home" element={<ApplicantHomePage />} />
         <Route path="/apply/chat" element={<ApplicantChatPage />} />
         <Route path="/apply/settings" element={<ApplicantSettingsPage />} />
+        <Route path="/apply/reupload" element={<ApplicantReuploadPage />} />
 
         {/* Protected — compliance back-office */}
         <Route element={<ProtectedRoute />}>

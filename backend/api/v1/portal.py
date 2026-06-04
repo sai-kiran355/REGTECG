@@ -406,3 +406,91 @@ async def get_document(
         media_type=doc.content_type,
         headers={"Content-Disposition": f'inline; filename="{doc.file_name}"'},
     )
+
+
+@router.post("/reupload/{case_id}/{doc_type}", status_code=200)
+async def reupload_document(
+    case_id: uuid.UUID,
+    doc_type: str,
+    request: Request,
+    file: UploadFile = None,
+) -> dict:
+    """
+    Applicant re-uploads a specific document for their case.
+    Requires applicant JWT in Authorization header.
+    """
+    from core.config import Settings
+    settings_obj = Settings()
+
+    # Validate applicant token
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail={"code": "UNAUTHENTICATED"})
+    token = auth.split(" ", 1)[1]
+    try:
+        from jose import jwt
+        claims = jwt.decode(token, settings_obj.SECRET_KEY, algorithms=["HS256"])
+        if claims.get("type") != "applicant":
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHENTICATED"})
+        tenant_id = uuid.UUID(claims["tenant_id"])
+    except Exception:
+        raise HTTPException(status_code=401, detail={"code": "INVALID_TOKEN"})
+
+    # Validate allowed doc types
+    allowed = {"aadhaar_front", "aadhaar_back", "pan_card", "selfie"}
+    if doc_type not in allowed:
+        raise HTTPException(status_code=422, detail={"code": "INVALID_DOC_TYPE"})
+
+    if file is None:
+        raise HTTPException(status_code=422, detail={"code": "MISSING_FILE", "message": "File is required."})
+
+    content = await _validate_file(file, doc_type)
+
+    async with AsyncSessionLocal() as db:
+        async with db.begin():
+            # Verify case belongs to this tenant
+            case_result = await db.execute(
+                select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+            )
+            case = case_result.scalar_one_or_none()
+            if not case:
+                raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+
+            # Get linked KYC record
+            kyc_result = await db.execute(
+                select(KYCRecord).where(KYCRecord.case_id == case_id)
+            )
+            kyc_record = kyc_result.scalar_one_or_none()
+            if not kyc_record:
+                raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+
+            from models.kyc_document import KYCDocument
+            # Delete existing document of this type
+            existing = await db.execute(
+                select(KYCDocument).where(
+                    KYCDocument.kyc_record_id == kyc_record.id,
+                    KYCDocument.document_type == doc_type,
+                )
+            )
+            old_doc = existing.scalar_one_or_none()
+            if old_doc:
+                await db.delete(old_doc)
+
+            # Save new document
+            content_type = file.content_type or "application/octet-stream"
+            new_doc = KYCDocument(
+                kyc_record_id=kyc_record.id,
+                tenant_id=tenant_id,
+                document_type=doc_type,
+                file_name=f"{doc_type}.{_get_extension(content_type)}",
+                content_type=content_type,
+                file_data=content,
+                file_size=len(content),
+            )
+            db.add(new_doc)
+
+            # Reset KYC status to pending for re-review
+            kyc_record.status = "pending"
+            case.status = "open"
+
+    return {"message": f"{doc_type} re-uploaded successfully. Your application is under review."}
