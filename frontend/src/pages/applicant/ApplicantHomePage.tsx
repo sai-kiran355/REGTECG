@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { ShieldCheck, FileText, CheckCircle, Clock, AlertTriangle, LogOut, Plus, ArrowRight, MessageCircle, Settings, AlertCircle } from 'lucide-react'
+import { ShieldCheck, FileText, CheckCircle, Clock, AlertTriangle, LogOut, Plus, ArrowRight, MessageCircle, Settings, AlertCircle, XCircle } from 'lucide-react'
 import axios from 'axios'
 import { useApplicantStore } from '../../store/applicantStore'
 import { Spinner } from '../../components/Spinner'
@@ -15,6 +15,8 @@ interface Application {
   case_type: string
   status: string
   status_label: string
+  kyc_status?: string
+  kyc_status_label?: string
   risk_level: string
   submitted_at: string
   updated_at: string
@@ -99,6 +101,26 @@ export function ApplicantHomePage() {
           <h2 className="text-2xl font-bold">{fullName}</h2>
           <p className="text-blue-100 text-sm mt-1">Track your applications and start new ones below</p>
         </div>
+
+        {/* Rejection banners */}
+        {apps.filter(a => a.kyc_status === 'rejected').map(app => (
+          <div key={`reject-${app.reference_number}`}
+            className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+            <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-900">Application Rejected — {app.subject_name}</p>
+              <p className="text-sm text-red-700 mt-0.5">
+                Your KYC application ({app.reference_number}) was not approved. You may apply again after 3 months from the submission date.
+              </p>
+              {app.case_id && (
+                <Link to={`/apply/chat?case=${app.case_id}&tenant=${tenantSlug}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 underline hover:text-red-800">
+                  <MessageCircle className="h-3.5 w-3.5" /> View officer message
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
 
         {/* Action Required banners for in_review applications */}
         {apps.filter(a => a.status === 'in_review').map(app => (
@@ -195,7 +217,13 @@ export function ApplicantHomePage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-end gap-1">
-                        <Badge variant={statusColors[app.status]} className="text-xs">{app.status_label}</Badge>
+                        {app.kyc_status === 'rejected' ? (
+                          <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">Rejected</span>
+                        ) : app.kyc_status === 'verified' ? (
+                          <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">Approved ✓</span>
+                        ) : (
+                          <Badge variant={statusColors[app.status]} className="text-xs">{app.status_label}</Badge>
+                        )}
                         <span className="text-xs text-gray-400 capitalize">{app.case_type} verification</span>
                       </div>
                       {app.case_id && (

@@ -255,7 +255,7 @@ async def get_applicant_applications(
         if not account:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
 
-        # Match cases by email OR mobile OR full name — portal submission may use different email
+        # Match cases by email OR mobile OR full name
         from sqlalchemy import or_
         cases_result = await db.execute(
             select(Case).where(
@@ -269,11 +269,29 @@ async def get_applicant_applications(
         )
         cases = cases_result.scalars().all()
 
+        # Get KYC records for each case
+        from models.kyc_record import KYCRecord
+        kyc_map: dict = {}
+        if cases:
+            case_ids = [c.id for c in cases]
+            kyc_result = await db.execute(
+                select(KYCRecord).where(KYCRecord.case_id.in_(case_ids))
+            )
+            for k in kyc_result.scalars().all():
+                kyc_map[str(k.case_id)] = k
+
     status_map = {
         "open": "Under Review",
-        "in_review": "Additional Verification Required",
+        "in_review": "Additional Documents Required",
         "pending": "Processing",
         "closed": "Completed",
+    }
+
+    kyc_status_map = {
+        "pending": "Pending Review",
+        "in_review": "Under Review",
+        "verified": "Approved ✓",
+        "rejected": "Rejected — Please apply again after 3 months",
     }
 
     return {
@@ -290,6 +308,10 @@ async def get_applicant_applications(
                 "case_type": c.case_type,
                 "status": c.status,
                 "status_label": status_map.get(c.status, "Under Review"),
+                "kyc_status": kyc_map[str(c.id)].status if str(c.id) in kyc_map else None,
+                "kyc_status_label": kyc_status_map.get(
+                    kyc_map[str(c.id)].status if str(c.id) in kyc_map else "", ""
+                ),
                 "risk_level": c.risk_level,
                 "submitted_at": c.created_at.isoformat(),
                 "updated_at": c.updated_at.isoformat(),
