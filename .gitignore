@@ -25,7 +25,6 @@ env/
 htmlcov/
 .coverage
 coverage.xml
-.python-version
 
 # ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
