@@ -76,28 +76,19 @@ npm run dev
 
 ## Environment Variables
 
-All variables are loaded from `backend/.env`. See `backend/.env.example` for the full list.
+All variables are loaded from `backend/.env`. Copy `backend/.env.example` and fill in your values.
 
 ### Required
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL async connection string | `postgresql+asyncpg://postgres:password@localhost:5432/regtech` |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
-| `SECRET_KEY` | Random secret for JWT signing (HS256) | generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `ENVIRONMENT` | `development`, `staging`, or `production` | `development` |
-| `APP_VERSION` | Semantic version | `0.1.0` |
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL async connection string — e.g. `postgresql+asyncpg://postgres:password@localhost:5432/regtech` |
+| `REDIS_URL` | Redis connection string — e.g. `redis://localhost:6379/0` |
+| `SECRET_KEY` | Random secret for signing — generate with: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `ENVIRONMENT` | `development`, `staging`, or `production` |
+| `APP_VERSION` | Semantic version — e.g. `0.1.0` |
 
-### Optional (with defaults)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOG_LEVEL` | `INFO` | Log level |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | JWT access token TTL |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token TTL |
-| `BCRYPT_COST` | `12` | bcrypt cost factor |
-| `RATE_LIMIT_ATTEMPTS` | `5` | Failed logins before lockout |
-| `RATE_LIMIT_WINDOW_SECONDS` | `900` | Lockout window (15 min) |
+All other settings have sensible defaults and don't need to be changed for local development. See `backend/.env.example` for the full list.
 
 ---
 
