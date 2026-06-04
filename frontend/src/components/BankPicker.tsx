@@ -20,7 +20,7 @@ interface BankPickerProps {
   backLabel?: string
 }
 
-export function BankPicker({ onSelect, redirectPath, title, subtitle, backTo, backLabel }: BankPickerProps) {
+export function BankPicker({ onSelect: _onSelect, redirectPath, title, subtitle, backTo, backLabel }: BankPickerProps) {
   const [banks, setBanks] = useState<Bank[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')

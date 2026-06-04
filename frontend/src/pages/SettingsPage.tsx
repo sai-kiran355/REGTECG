@@ -186,7 +186,7 @@ export function SettingsPage() {
                 <p className="text-xs text-gray-500">Receive alerts for this category</p>
               </div>
               <button
-                onClick={() => setNotifications(n => ({ ...n, [key]: !val }))}
+                onClick={() => setNotifications((n: typeof notifications) => ({ ...n, [key]: !val }))}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${val ? 'bg-brand-600' : 'bg-gray-200'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${val ? 'translate-x-6' : 'translate-x-1'}`} />

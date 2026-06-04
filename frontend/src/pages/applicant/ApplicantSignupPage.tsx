@@ -17,7 +17,7 @@ export function ApplicantSignupPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   // Always slugify whatever comes from the URL so "swiss bank" → "swiss-bank"
-  const [tenantSlug, setTenantSlug] = useState(slugify(params.get('tenant') ?? ''))
+  const [tenantSlug] = useState(slugify(params.get('tenant') ?? ''))
   const { setApplicant } = useApplicantStore()
 
   const [fullName, setFullName] = useState('')
