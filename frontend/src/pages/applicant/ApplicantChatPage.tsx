@@ -45,7 +45,7 @@ export function ApplicantChatPage() {
       if (!silent) setLoadError(null)
 
       const newMessages: Message[] = r.data.messages || []
-      const latestId = newMessages.at(-1)?.id ?? null
+      const latestId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null
 
       if (latestId !== lastMessageIdRef.current) {
         setMessages(newMessages)

@@ -38,7 +38,7 @@ export function ChatPage() {
       setOnline(true)
 
       // Only update + scroll if there are new messages
-      const latestId = newMessages.at(-1)?.id ?? null
+      const latestId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null
       if (latestId !== lastMessageIdRef.current) {
         setMessages(newMessages)
         lastMessageIdRef.current = latestId
