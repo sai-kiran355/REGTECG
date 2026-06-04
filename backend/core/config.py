@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_S3_BUCKET_NAME: str = ""
     AWS_S3_REGION: str = "ap-south-1"
-    R2_ENDPOINT_URL: str = ""   # Set for Cloudflare R2, leave empty for AWS
+    R2_ENDPOINT_URL: str = ""
+
+    # ── Frontend URL (set on Render to allow CORS from Vercel) ────────
+    FRONTEND_URL: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
