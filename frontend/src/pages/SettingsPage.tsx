@@ -16,7 +16,7 @@ function loadNotifications() {
 }
 
 export function SettingsPage() {
-  const { user, tenantSlug } = useAuthStore()
+  const { user } = useAuthStore()
 
   // Password change state
   const [currentPw, setCurrentPw]   = useState('')
