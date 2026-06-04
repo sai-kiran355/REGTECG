@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, FormEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, MessageCircle, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Send, MessageCircle, ShieldCheck, AlertCircle } from 'lucide-react'
 import axios from 'axios'
 import { useApplicantStore } from '../../store/applicantStore'
 import { Spinner } from '../../components/Spinner'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const POLL_INTERVAL = 3000
 
 interface Message {
   id: string
@@ -20,7 +21,6 @@ export function ApplicantChatPage() {
   const caseId = params.get('case')
   const navigate = useNavigate()
   const { accessToken, isAuthenticated, tenantSlug: storedSlug } = useApplicantStore()
-
   const tenantSlug = params.get('tenant') || storedSlug || ''
 
   const [messages, setMessages] = useState<Message[]>([])
@@ -29,50 +29,96 @@ export function ApplicantChatPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [online, setOnline] = useState(true)
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastMessageIdRef = useRef<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => {
-    if (!isAuthenticated) { navigate(`/apply/login${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
-    if (!caseId) { navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
-    fetchMessages()
-  }, [isAuthenticated, caseId])
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async (silent = false) => {
     if (!caseId || !accessToken) return
-    setLoadError(null)
     try {
       const r = await axios.get(`${BASE_URL}/api/v1/chat/${caseId}/applicant/messages`, {
         headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug },
       })
-      setMessages(r.data.messages || [])
+      setOnline(true)
+      if (!silent) setLoadError(null)
+
+      const newMessages: Message[] = r.data.messages || []
+      const latestId = newMessages.at(-1)?.id ?? null
+
+      if (latestId !== lastMessageIdRef.current) {
+        setMessages(newMessages)
+        lastMessageIdRef.current = latestId
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
+
       setCaseNumber(r.data.case_number || '')
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? err?.response?.data?.detail?.message ?? 'Failed to load messages.'
-      setLoadError(msg)
+      setOnline(false)
+      if (!silent) {
+        setLoadError(err?.response?.data?.error?.message ?? 'Failed to load messages.')
+      }
     } finally {
       setLoading(false)
     }
-  }
+  }, [caseId, accessToken, tenantSlug])
+
+  useEffect(() => {
+    if (!isAuthenticated) { navigate(`/apply/login${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
+    if (!caseId) { navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
+    fetchMessages(false)
+  }, [isAuthenticated, caseId, fetchMessages, navigate, tenantSlug])
+
+  // Scroll on first load
+  useEffect(() => {
+    if (!loading) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [loading])
+
+  // Smart polling
+  useEffect(() => {
+    const startPolling = () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchMessages(true)
+      }, POLL_INTERVAL)
+    }
+
+    startPolling()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMessages(true)
+        startPolling()
+      } else {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [fetchMessages])
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault()
     if (!text.trim() || !caseId || !accessToken) return
     setSending(true)
     setSendError(null)
+    const msgText = text.trim()
+    setText('')
     try {
       await axios.post(
         `${BASE_URL}/api/v1/chat/${caseId}/applicant/messages`,
-        { message: text.trim() },
+        { message: msgText },
         { headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug } }
       )
-      setText('')
-      await fetchMessages()
+      await fetchMessages(false)
     } catch (err: any) {
-      const msg = err?.response?.data?.error?.message ?? err?.response?.data?.detail?.message ?? 'Failed to send message. Please try again.'
-      setSendError(msg)
+      setSendError(err?.response?.data?.error?.message ?? 'Failed to send. Please try again.')
+      setText(msgText)
     } finally {
       setSending(false)
     }
@@ -84,10 +130,8 @@ export function ApplicantChatPage() {
     <div className="flex h-screen flex-col bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`)}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-        >
+        <button onClick={() => navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`)}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
@@ -95,19 +139,16 @@ export function ApplicantChatPage() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-gray-900">{bankName} Compliance</p>
-          {caseNumber && <p className="text-xs text-gray-500">Case: {caseNumber}</p>}
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-green-500' : 'bg-red-400'}`} />
+            <p className="text-xs text-gray-500">
+              {caseNumber ? `Case: ${caseNumber} · ` : ''}{online ? 'Live' : 'Reconnecting…'}
+            </p>
+          </div>
         </div>
-        {/* Refresh */}
-        <button
-          onClick={() => { setLoading(true); fetchMessages() }}
-          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-          title="Refresh messages"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
       </header>
 
-      {/* Messages area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading ? (
           <div className="flex justify-center py-12"><Spinner /></div>
@@ -115,12 +156,8 @@ export function ApplicantChatPage() {
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
             <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
             <p className="text-sm font-medium text-gray-700">{loadError}</p>
-            <button
-              onClick={() => { setLoading(true); fetchMessages() }}
-              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              Try again
-            </button>
+            <button onClick={() => { setLoading(true); fetchMessages(false) }}
+              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700">Try again</button>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -133,11 +170,9 @@ export function ApplicantChatPage() {
             const isApplicant = msg.sender_type === 'applicant'
             return (
               <div key={msg.id} className={`flex ${isApplicant ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                  isApplicant
-                    ? 'bg-blue-600 text-white rounded-br-sm'
-                    : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'
-                }`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${isApplicant
+                  ? 'bg-blue-600 text-white rounded-br-sm'
+                  : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'}`}>
                   <p className={`text-xs font-semibold mb-1 ${isApplicant ? 'text-blue-100' : 'text-blue-600'}`}>
                     {isApplicant ? 'You' : msg.sender_name}
                   </p>
@@ -153,12 +188,11 @@ export function ApplicantChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Send error */}
       {sendError && (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
           <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-          <p className="text-sm text-red-700">{sendError}</p>
-          <button onClick={() => setSendError(null)} className="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+          <p className="text-sm text-red-700 flex-1">{sendError}</p>
+          <button onClick={() => setSendError(null)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
         </div>
       )}
 
@@ -170,19 +204,11 @@ export function ApplicantChatPage() {
             placeholder="Type your message to the compliance officer…"
             value={text}
             onChange={e => setText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend(e as any)
-              }
-            }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e as any) } }}
             rows={1}
           />
-          <button
-            type="submit"
-            disabled={sending || !text.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
+          <button type="submit" disabled={sending || !text.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
             {sending ? <Spinner size="sm" /> : <Send className="h-4 w-4" />}
           </button>
         </div>

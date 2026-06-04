@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, FormEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, MessageCircle, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Send, MessageCircle, Wifi } from 'lucide-react'
 import { apiClient } from '../api/client'
 import { Spinner } from '../components/Spinner'
+
+const POLL_INTERVAL = 3000 // poll every 3 seconds
 
 interface Message {
   id: string
@@ -23,40 +25,95 @@ export function ChatPage() {
   const [sending, setSending] = useState(false)
   const [text, setText] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
+  const [online, setOnline] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastMessageIdRef = useRef<string | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async (silent = false) => {
     if (!caseId) return
     try {
       const r = await apiClient.get(`/api/v1/chat/${caseId}/messages`)
-      setMessages(r.data.messages || [])
+      const newMessages: Message[] = r.data.messages || []
+      setOnline(true)
+
+      // Only update + scroll if there are new messages
+      const latestId = newMessages.at(-1)?.id ?? null
+      if (latestId !== lastMessageIdRef.current) {
+        setMessages(newMessages)
+        lastMessageIdRef.current = latestId
+        if (!silent) {
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+        }
+      }
+
       setCaseNumber(r.data.case_number || '')
       setSubjectName(r.data.subject_name || '')
-      // Mark as read
+
       if (r.data.unread_count > 0) {
-        await apiClient.put(`/api/v1/chat/${caseId}/read`)
+        apiClient.put(`/api/v1/chat/${caseId}/read`).catch(() => null)
       }
-    } catch { /* ignore */ }
-    finally { setLoading(false) }
-  }
+    } catch {
+      setOnline(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [caseId])
 
-  useEffect(() => { fetchMessages() }, [caseId])
-
+  // Initial load
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    fetchMessages(false)
+  }, [fetchMessages])
+
+  // Scroll to bottom on first load
+  useEffect(() => {
+    if (!loading) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [loading])
+
+  // Smart polling — only when tab is visible
+  useEffect(() => {
+    const startPolling = () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchMessages(true)
+        }
+      }, POLL_INTERVAL)
+    }
+
+    startPolling()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMessages(true) // immediately fetch when tab becomes visible
+        startPolling()
+      } else {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [fetchMessages])
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault()
     if (!text.trim() || !caseId) return
     setSending(true)
     setSendError(null)
+    const msgText = text.trim()
+    setText('') // clear immediately for better UX
     try {
-      await apiClient.post(`/api/v1/chat/${caseId}/messages`, { message: text.trim() })
-      setText('')
-      await fetchMessages()
+      await apiClient.post(`/api/v1/chat/${caseId}/messages`, { message: msgText })
+      await fetchMessages(false) // fetch immediately after send
     } catch (err: any) {
       setSendError(err?.response?.data?.error?.message ?? 'Failed to send. Please try again.')
+      setText(msgText) // restore text if failed
     } finally {
       setSending(false)
     }
@@ -75,10 +132,14 @@ export function ChatPage() {
             <p className="font-semibold text-gray-900">{subjectName || 'Chat'}</p>
             {caseNumber && <span className="text-xs text-gray-400">· {caseNumber}</span>}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">Messages with the applicant</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-green-500' : 'bg-red-400'}`} />
+            <p className="text-xs text-gray-500">{online ? 'Live · updates every 3s' : 'Reconnecting…'}</p>
+          </div>
         </div>
-        <button onClick={fetchMessages} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
-          <RefreshCw className="h-4 w-4" />
+        <button onClick={() => fetchMessages(false)}
+          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" title="Refresh now">
+          <Wifi className="h-4 w-4" />
         </button>
       </div>
 
@@ -97,7 +158,9 @@ export function ChatPage() {
             const isOfficer = msg.sender_type === 'officer'
             return (
               <div key={msg.id} className={`flex ${isOfficer ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${isOfficer ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'}`}>
+                <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${isOfficer
+                  ? 'bg-blue-600 text-white rounded-br-sm'
+                  : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'}`}>
                   <p className={`text-xs font-semibold mb-1 ${isOfficer ? 'text-blue-100' : 'text-blue-600'}`}>
                     {isOfficer ? 'You' : msg.sender_name}
                   </p>
@@ -134,15 +197,12 @@ export function ChatPage() {
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e as any) } }}
             rows={1}
           />
-          <button
-            type="submit"
-            disabled={sending || !text.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
+          <button type="submit" disabled={sending || !text.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
             {sending ? <Spinner size="sm" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
-        <p className="mt-2 text-xs text-gray-400">Press Enter to send · Shift+Enter for new line</p>
+        <p className="mt-2 text-xs text-gray-400">Enter to send · Shift+Enter for new line</p>
       </form>
     </div>
   )
