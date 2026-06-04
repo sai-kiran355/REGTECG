@@ -35,30 +35,27 @@ export function ApplicantChatPage() {
   const lastMessageIdRef = useRef<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchMessages = useCallback(async (silent = false) => {
+  const fetchMessages = useCallback(async (_silent = false) => {
     if (!caseId || !accessToken) return
     try {
       const r = await axios.get(`${BASE_URL}/api/v1/chat/${caseId}/applicant/messages`, {
         headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug },
       })
       setOnline(true)
-      if (!silent) setLoadError(null)
-
+      setLoadError(null)
       const newMessages: Message[] = r.data.messages || []
+      // Always update messages
+      setMessages(newMessages)
+      // Scroll only when last message changes
       const latestId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null
-
       if (latestId !== lastMessageIdRef.current) {
-        setMessages(newMessages)
         lastMessageIdRef.current = latestId
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
       }
-
       setCaseNumber(r.data.case_number || '')
     } catch (err: any) {
       setOnline(false)
-      if (!silent) {
-        setLoadError(err?.response?.data?.error?.message ?? 'Failed to load messages.')
-      }
+      setLoadError(err?.response?.data?.error?.message ?? 'Failed to load messages.')
     } finally {
       setLoading(false)
     }

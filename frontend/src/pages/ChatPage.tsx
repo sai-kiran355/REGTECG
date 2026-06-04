@@ -30,26 +30,22 @@ export function ChatPage() {
   const lastMessageIdRef = useRef<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchMessages = useCallback(async (silent = false) => {
+  const fetchMessages = useCallback(async (_silent = false) => {
     if (!caseId) return
     try {
       const r = await apiClient.get(`/api/v1/chat/${caseId}/messages`)
       const newMessages: Message[] = r.data.messages || []
       setOnline(true)
-
-      // Only update + scroll if there are new messages
-      const latestId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null
-      if (latestId !== lastMessageIdRef.current) {
-        setMessages(newMessages)
-        lastMessageIdRef.current = latestId
-        if (!silent) {
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-        }
-      }
-
+      // Always update — let React diff handle no-op renders
+      setMessages(newMessages)
       setCaseNumber(r.data.case_number || '')
       setSubjectName(r.data.subject_name || '')
-
+      // Scroll only when last message changes
+      const latestId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null
+      if (latestId !== lastMessageIdRef.current) {
+        lastMessageIdRef.current = latestId
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
       if (r.data.unread_count > 0) {
         apiClient.put(`/api/v1/chat/${caseId}/read`).catch(() => null)
       }
