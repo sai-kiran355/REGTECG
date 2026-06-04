@@ -1,0 +1,193 @@
+import { useState, useEffect, useRef, FormEvent } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Send, MessageCircle, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react'
+import axios from 'axios'
+import { useApplicantStore } from '../../store/applicantStore'
+import { Spinner } from '../../components/Spinner'
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+
+interface Message {
+  id: string
+  sender_type: 'officer' | 'applicant'
+  sender_name: string
+  message: string
+  created_at: string
+}
+
+export function ApplicantChatPage() {
+  const [params] = useSearchParams()
+  const caseId = params.get('case')
+  const navigate = useNavigate()
+  const { accessToken, isAuthenticated, tenantSlug: storedSlug } = useApplicantStore()
+
+  const tenantSlug = params.get('tenant') || storedSlug || ''
+
+  const [messages, setMessages] = useState<Message[]>([])
+  const [caseNumber, setCaseNumber] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [text, setText] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isAuthenticated) { navigate(`/apply/login${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
+    if (!caseId) { navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`); return }
+    fetchMessages()
+  }, [isAuthenticated, caseId])
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  const fetchMessages = async () => {
+    if (!caseId || !accessToken) return
+    setLoadError(null)
+    try {
+      const r = await axios.get(`${BASE_URL}/api/v1/chat/${caseId}/applicant/messages`, {
+        headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug },
+      })
+      setMessages(r.data.messages || [])
+      setCaseNumber(r.data.case_number || '')
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message ?? err?.response?.data?.detail?.message ?? 'Failed to load messages.'
+      setLoadError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSend = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!text.trim() || !caseId || !accessToken) return
+    setSending(true)
+    setSendError(null)
+    try {
+      await axios.post(
+        `${BASE_URL}/api/v1/chat/${caseId}/applicant/messages`,
+        { message: text.trim() },
+        { headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug } }
+      )
+      setText('')
+      await fetchMessages()
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message ?? err?.response?.data?.detail?.message ?? 'Failed to send message. Please try again.'
+      setSendError(msg)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const bankName = tenantSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+  return (
+    <div className="flex h-screen flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3">
+        <button
+          onClick={() => navigate(`/apply/home${tenantSlug ? `?tenant=${tenantSlug}` : ''}`)}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
+          <ShieldCheck className="h-5 w-5 text-white" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-gray-900">{bankName} Compliance</p>
+          {caseNumber && <p className="text-xs text-gray-500">Case: {caseNumber}</p>}
+        </div>
+        {/* Refresh */}
+        <button
+          onClick={() => { setLoading(true); fetchMessages() }}
+          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          title="Refresh messages"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-12"><Spinner /></div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
+            <p className="text-sm font-medium text-gray-700">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); fetchMessages() }}
+              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              Try again
+            </button>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <MessageCircle className="h-12 w-12 text-gray-300 mb-3" />
+            <p className="text-sm font-medium text-gray-500">No messages yet</p>
+            <p className="text-xs text-gray-400 mt-1">Send a message to start the conversation with your compliance officer</p>
+          </div>
+        ) : (
+          messages.map(msg => {
+            const isApplicant = msg.sender_type === 'applicant'
+            return (
+              <div key={msg.id} className={`flex ${isApplicant ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                  isApplicant
+                    ? 'bg-blue-600 text-white rounded-br-sm'
+                    : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'
+                }`}>
+                  <p className={`text-xs font-semibold mb-1 ${isApplicant ? 'text-blue-100' : 'text-blue-600'}`}>
+                    {isApplicant ? 'You' : msg.sender_name}
+                  </p>
+                  <p className="text-sm leading-relaxed">{msg.message}</p>
+                  <p className={`text-xs mt-1 ${isApplicant ? 'text-blue-200' : 'text-gray-400'}`}>
+                    {new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Send error */}
+      {sendError && (
+        <div className="mx-4 mb-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
+          <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700">{sendError}</p>
+          <button onClick={() => setSendError(null)} className="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+        </div>
+      )}
+
+      {/* Input */}
+      <form onSubmit={handleSend} className="bg-white border-t border-gray-200 p-4">
+        <div className="flex gap-3 items-end">
+          <textarea
+            className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            placeholder="Type your message to the compliance officer…"
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend(e as any)
+              }
+            }}
+            rows={1}
+          />
+          <button
+            type="submit"
+            disabled={sending || !text.trim()}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {sending ? <Spinner size="sm" /> : <Send className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className="mt-1.5 text-xs text-gray-400">Enter to send · Shift+Enter for new line</p>
+      </form>
+    </div>
+  )
+}
