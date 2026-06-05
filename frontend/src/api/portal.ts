@@ -18,6 +18,7 @@ export interface PortalSubmitPayload {
   city: string
   state: string
   pincode: string
+  application_purpose: string
   // Step 2 — Identity
   aadhaar_number: string
   pan_number: string
@@ -62,6 +63,9 @@ export async function submitApplication(
   form.append('city', payload.city)
   form.append('state', payload.state)
   form.append('pincode', payload.pincode)
+  if (payload.application_purpose) {
+    form.append('application_purpose', payload.application_purpose)
+  }
   form.append('aadhaar_number', payload.aadhaar_number)
   form.append('pan_number', payload.pan_number)
 

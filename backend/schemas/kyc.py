@@ -63,6 +63,7 @@ class KYCRecordResponse(BaseModel):
     status: str
     risk_level: str
     reviewer_id: uuid.UUID | None
+    application_purpose: str | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

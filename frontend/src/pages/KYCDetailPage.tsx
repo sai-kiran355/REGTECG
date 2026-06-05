@@ -237,6 +237,12 @@ export function KYCDetailPage() {
             <div className="flex justify-between"><span className="text-gray-500">Full Name</span><span className="font-medium">{record.full_name}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Date of Birth</span><span className="font-medium">{record.date_of_birth}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Nationality</span><span className="font-medium">{record.nationality}</span></div>
+            {record.application_purpose && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Purpose of Application</span>
+                <span className="font-medium capitalize">{record.application_purpose.replace(/_/g, ' ')}</span>
+              </div>
+            )}
             <div className="flex justify-between"><span className="text-gray-500">Status</span><Badge variant={statusColors[record.status]} className="capitalize">{record.status.replace('_', ' ')}</Badge></div>
             <div className="flex justify-between"><span className="text-gray-500">Risk Level</span><Badge variant={riskColors[record.risk_level]} className="capitalize">{record.risk_level}</Badge></div>
           </div>

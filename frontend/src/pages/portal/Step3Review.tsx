@@ -5,6 +5,17 @@ import { submitApplication, PortalSubmitResponse } from '../../api/portal'
 import type { Step1Data } from './Step1PersonalDetails'
 import type { Step2Data } from './Step2Documents'
 
+const PURPOSE_LABELS: Record<string, string> = {
+  personal_loan:  'Personal Loan',
+  home_loan:      'Home Loan',
+  car_loan:       'Car / Vehicle Loan',
+  credit_card:    'Credit Card',
+  investment:     'Investment / Mutual Funds',
+  insurance:      'Insurance',
+  forex:          'Forex / Remittance',
+  other:          'Other',
+}
+
 interface Props {
   step1: Step1Data
   step2: Step2Data
@@ -72,6 +83,9 @@ export function Step3Review({ step1, step2, tenantSlug, onBack, onSuccess }: Pro
           <Row label="Gender" value={step1.gender} />
           <Row label="Mobile" value={step1.mobile} />
           <Row label="Email" value={step1.email} />
+          {step1.application_purpose && (
+            <Row label="Purpose of Application" value={PURPOSE_LABELS[step1.application_purpose] ?? step1.application_purpose} />
+          )}
         </div>
 
         <div className="mb-4">

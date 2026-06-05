@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { User, Phone, MapPin, ChevronRight } from 'lucide-react'
+import { User, Phone, MapPin, ChevronRight, Home, CreditCard, TrendingUp, Shield, Globe, HelpCircle, Building2, Landmark } from 'lucide-react'
 
 const INDIAN_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
@@ -9,6 +9,17 @@ const INDIAN_STATES = [
   'Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh',
   'Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir',
   'Ladakh','Lakshadweep','Puducherry',
+]
+
+const APPLICATION_PURPOSES = [
+  { value: 'personal_loan',  label: 'Personal Loan',           icon: Building2,  color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+  { value: 'home_loan',      label: 'Home Loan',               icon: Home,       color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-200'  },
+  { value: 'car_loan',       label: 'Car / Vehicle Loan',      icon: Globe,      color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200'   },
+  { value: 'credit_card',    label: 'Credit Card',             icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+  { value: 'investment',     label: 'Investment / Mutual Funds', icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-50',   border: 'border-teal-200'   },
+  { value: 'insurance',      label: 'Insurance',               icon: Shield,     color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200'    },
+  { value: 'forex',          label: 'Forex / Remittance',      icon: Landmark,   color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+  { value: 'other',          label: 'Other',                   icon: HelpCircle, color: 'text-gray-600',   bg: 'bg-gray-50',   border: 'border-gray-200'   },
 ]
 
 export interface Step1Data {
@@ -21,6 +32,7 @@ export interface Step1Data {
   city: string
   state: string
   pincode: string
+  application_purpose: string
 }
 
 interface Props {
@@ -47,6 +59,7 @@ export function Step1PersonalDetails({ initialValues = {}, onNext }: Props) {
     city: initialValues.city ?? '',
     state: initialValues.state ?? '',
     pincode: initialValues.pincode ?? '',
+    application_purpose: initialValues.application_purpose ?? '',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof Step1Data, string>>>({})
 
@@ -60,6 +73,7 @@ export function Step1PersonalDetails({ initialValues = {}, onNext }: Props) {
     if (!form.date_of_birth) errs.date_of_birth = 'Date of birth is required.'
     else if (!isAtLeast18(form.date_of_birth)) errs.date_of_birth = 'You must be at least 18 years old.'
     if (!form.gender) errs.gender = 'Please select your gender.'
+    if (!form.application_purpose) errs.application_purpose = 'Please select the purpose of your application.'
     if (!/^[6-9]\d{9}$/.test(form.mobile)) errs.mobile = 'Enter a valid 10-digit Indian mobile number (starts with 6-9).'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Enter a valid email address.'
     if (!form.address.trim()) errs.address = 'Address is required.'
@@ -91,6 +105,47 @@ export function Step1PersonalDetails({ initialValues = {}, onNext }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Purpose of Application — tile selector */}
+      <div className="card p-6">
+        <div className="mb-5">
+          <h2 className="text-base font-semibold text-gray-900">Why are you applying?</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Select the primary reason for this KYC application</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {APPLICATION_PURPOSES.map(p => {
+            const Icon = p.icon
+            const selected = form.application_purpose === p.value
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, application_purpose: p.value }))}
+                className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-center transition-all duration-150 cursor-pointer
+                  ${selected
+                    ? `${p.border} ${p.bg} shadow-sm ring-2 ring-offset-1 ${p.border.replace('border-', 'ring-')}`
+                    : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'
+                  }`}
+              >
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${selected ? p.bg : 'bg-gray-50'}`}>
+                  <Icon className={`h-5 w-5 ${selected ? p.color : 'text-gray-400'}`} />
+                </div>
+                <span className={`text-xs font-medium leading-tight ${selected ? 'text-gray-900' : 'text-gray-600'}`}>
+                  {p.label}
+                </span>
+                {selected && (
+                  <span className={`absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full text-white text-[10px] font-bold ${p.color.replace('text-', 'bg-')}`}>
+                    ✓
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        {errors.application_purpose && (
+          <p className="mt-3 text-xs text-red-600">{errors.application_purpose}</p>
+        )}
+      </div>
+
       <div className="card p-6">
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">

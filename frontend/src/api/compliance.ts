@@ -39,6 +39,7 @@ export interface KYCRecord {
   status: 'pending' | 'in_review' | 'verified' | 'rejected'
   risk_level: 'low' | 'medium' | 'high'
   reviewer_id?: string
+  application_purpose?: string
   notes?: string
   case_id?: string
   created_at: string

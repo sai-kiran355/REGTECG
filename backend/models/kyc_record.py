@@ -32,9 +32,10 @@ class KYCRecord(Base):
     document_type   : 'passport', 'national_id', or 'drivers_license'.
     document_number : Identifier on the document.
     status          : 'pending', 'in_review', 'verified', or 'rejected'.
-    risk_level      : 'low', 'medium', or 'high'.
-    reviewer_id     : FK → public.users.id (nullable), SET NULL on delete.
-    notes           : Free-text reviewer notes (nullable).
+    risk_level           : 'low', 'medium', or 'high'.
+    reviewer_id          : FK → public.users.id (nullable), SET NULL on delete.
+    application_purpose  : Purpose of application (e.g. 'loan', 'account_opening') — nullable.
+    notes                : Free-text reviewer notes (nullable).
     created_at      : UTC timestamp set on INSERT (inherited from Base).
     updated_at      : UTC timestamp set on INSERT and updated on every UPDATE
                       (inherited from Base).
@@ -93,6 +94,11 @@ class KYCRecord(Base):
         UUID(as_uuid=True),
         ForeignKey("public.users.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    application_purpose: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        index=True,
     )
     notes: Mapped[str | None] = mapped_column(
         Text,

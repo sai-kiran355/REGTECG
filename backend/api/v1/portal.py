@@ -145,6 +145,8 @@ async def submit_application(
     city: str = Form(...),
     state: str = Form(...),
     pincode: str = Form(...),
+    # Application purpose
+    application_purpose: str | None = Form(default=None),
     # Identity
     aadhaar_number: str = Form(...),
     pan_number: str = Form(...),
@@ -240,6 +242,8 @@ async def submit_application(
                 notes=None,
             )
             kyc_record.status = kyc_status
+            if application_purpose:
+                kyc_record.application_purpose = application_purpose.strip()
 
             # Create Case
             case = await create_case(
@@ -312,6 +316,7 @@ async def submit_application(
                     "aadhaar_verified": aadhaar_ok,
                     "pan_verified": pan_ok,
                     "sanctions_result": screening.match_type,
+                    "application_purpose": application_purpose or "not_specified",
                 },
             )
 

@@ -5,7 +5,6 @@ import { getApplicationStatus, PortalStatusResponse } from '../../api/portal'
 import { PortalLayout } from './PortalLayout'
 import { Spinner } from '../../components/Spinner'
 import { BankPicker } from '../../components/BankPicker'
-
 const slugify = (s: string) =>
   s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -107,6 +106,21 @@ export function PortalStatus() {
                 <p className="text-sm opacity-80">Reference: {result.reference_number}</p>
               </div>
             </div>
+
+            {/* Rejection notice */}
+            {result.kyc_status === 'rejected' && (
+              <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+                <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-900">Application Rejected</p>
+                  <p className="text-sm text-red-700 mt-0.5">
+                    Your KYC application was not approved. You may apply again after 3 months from the original submission date.
+                    If you have questions, please contact your bank branch.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Application Status</span>
@@ -114,7 +128,9 @@ export function PortalStatus() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">KYC Status</span>
-                <span className="font-medium capitalize">{result.kyc_status.replace('_', ' ')}</span>
+                <span className={`font-medium capitalize ${result.kyc_status === 'rejected' ? 'text-red-600' : result.kyc_status === 'verified' ? 'text-green-600' : ''}`}>
+                  {result.kyc_status.replace('_', ' ')}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Submitted On</span>
