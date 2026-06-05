@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle, Info, XCircle, X } from 'lucide-react'
 
 type AlertVariant = 'error' | 'success' | 'info' | 'warning'
 
@@ -8,6 +8,7 @@ interface AlertProps {
   title?: string
   message: string
   className?: string
+  onClose?: () => void
 }
 
 const icons = {
@@ -31,15 +32,20 @@ const iconStyles = {
   warning: 'text-yellow-500',
 }
 
-export function Alert({ variant = 'info', title, message, className }: AlertProps) {
+export function Alert({ variant = 'info', title, message, className, onClose }: AlertProps) {
   const Icon = icons[variant]
   return (
     <div className={clsx('flex gap-3 rounded-lg border p-4', styles[variant], className)}>
       <Icon className={clsx('mt-0.5 h-5 w-5 shrink-0', iconStyles[variant])} />
-      <div>
+      <div className="flex-1">
         {title && <p className="font-semibold">{title}</p>}
         <p className="text-sm">{message}</p>
       </div>
+      {onClose && (
+        <button onClick={onClose} className="ml-auto shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   )
 }

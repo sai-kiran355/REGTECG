@@ -70,14 +70,6 @@ async def signup(
             detail={"code": "INVALID_ORG_TYPE", "message": "organization_type must be 'bank' or 'fintech'"},
         )
 
-    # Check email not already registered
-    existing = await db.execute(select(User).where(User.email == body.email))
-    if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "EMAIL_EXISTS", "message": "An account with this email already exists."},
-        )
-
     # Generate unique slug for the organization
     base_slug = _slugify(body.organization_name)
     slug = base_slug

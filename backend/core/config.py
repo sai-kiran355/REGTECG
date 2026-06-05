@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # ── Frontend URL (set on Render to allow CORS from Vercel) ────────
     FRONTEND_URL: str = ""
 
+    # ── Gemini AI (for ATS resume screening & chat assistant) ─────────
+    GEMINI_API_KEY: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

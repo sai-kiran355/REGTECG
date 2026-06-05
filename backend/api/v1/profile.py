@@ -25,6 +25,7 @@ class ProfileResponse(BaseModel):
     email: str
     role: str
     tenant_id: str
+    tenant_slug: str
     organization_name: str
     organization_type: str
     permissions: list[str]
@@ -61,6 +62,7 @@ async def get_profile(
         email=user.email,
         role=current_user.role,
         tenant_id=str(user.tenant_id),
+        tenant_slug=tenant.slug if tenant else "",
         organization_name=tenant.name if tenant else "",
         organization_type=tenant.organization_type if tenant else "bank",
         permissions=current_user.permissions,
@@ -100,6 +102,7 @@ async def update_profile(
         email=user.email,
         role=current_user.role,
         tenant_id=str(user.tenant_id),
+        tenant_slug=tenant.slug if tenant else "",
         organization_name=tenant.name if tenant else "",
         organization_type=tenant.organization_type if tenant else "bank",
         permissions=current_user.permissions,

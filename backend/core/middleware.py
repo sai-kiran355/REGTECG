@@ -144,8 +144,10 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS" or request.url.path in self.EXCLUDED_PATHS:
             return await call_next(request)
 
-        # Also exclude portal status paths with dynamic segments
+        # Also exclude portal and careers paths with dynamic segments
         if request.url.path.startswith("/api/v1/portal/"):
+            return await call_next(request)
+        if request.url.path.startswith("/api/v1/careers/"):
             return await call_next(request)
         # Extract X-Tenant-ID header.
         tenant_header = request.headers.get("X-Tenant-ID", "").strip()

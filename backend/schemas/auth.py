@@ -18,17 +18,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 class LoginRequest(BaseModel):
     """Request body for POST /api/v1/auth/login."""
 
-    email: EmailStr = Field(
-        ...,
-        description="Your email address",
-        max_length=254,
-    )
-    password: str = Field(
-        ...,
-        description="Your password",
-        min_length=1,
-        max_length=128,
-    )
+    email: EmailStr = Field(..., description="Your email address", max_length=254)
+    password: str = Field(..., description="Your password", min_length=1, max_length=128)
+    product: str | None = Field(default=None, description="Product hint: 'compliance' or 'fintech'")
 
 
 class TokenResponse(BaseModel):

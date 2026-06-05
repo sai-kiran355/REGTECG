@@ -10,6 +10,7 @@ export interface AuthUser {
   email?: string
   organization_name?: string
   organization_type?: string
+  tenant_slug?: string
 }
 
 interface AuthState {

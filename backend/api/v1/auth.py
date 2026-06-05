@@ -59,11 +59,31 @@ async def login(
             headers={"Retry-After": str(max(ttl, 1))},
         )
 
-    # Look up user by email (across all tenants — email is globally unique)
-    result = await db.execute(select(User).where(User.email == body.email))
-    user = result.scalar_one_or_none()
+    # Look up user by email — may exist in multiple tenants (bank + fintech)
+    # Join with Tenant to filter by organization_type if product context is provided
+    from models.tenant import Tenant as TenantModel
+    result = await db.execute(
+        select(User).join(TenantModel, User.tenant_id == TenantModel.id)
+        .where(User.email == body.email, TenantModel.status == "active")
+        .order_by(User.created_at.desc())
+    )
+    users = result.scalars().all()
 
-    if user is None or not verify_password(body.password, user.hashed_password):
+    # Find matching user — try password against all matching accounts
+    user = None
+    for u in users:
+        if verify_password(body.password, u.hashed_password):
+            # If product hint provided, prefer matching org type
+            if hasattr(body, 'product') and body.product:
+                expected = 'fintech' if body.product == 'fintech' else 'bank'
+                if hasattr(u, 'tenant') and u.tenant and u.tenant.organization_type == expected:
+                    user = u
+                    break
+            else:
+                user = u
+                break
+
+    if user is None:
         # Increment failure counter
         pipe = redis.pipeline()
         pipe.incr(rate_key)
@@ -116,12 +136,14 @@ async def refresh(
     settings = Settings()
 
     refresh_key = f"{REFRESH_PREFIX}{body.refresh_token}"
-    user_id = await redis.getdel(refresh_key)
+    # Use GET + DELETE instead of GETDEL for Redis < 6.2 compatibility
+    user_id = await redis.get(refresh_key)
     if user_id is None:
         raise HTTPException(
             status_code=401,
             detail={"code": "INVALID_REFRESH_TOKEN", "message": "Refresh token is invalid or expired."},
         )
+    await redis.delete(refresh_key)
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()

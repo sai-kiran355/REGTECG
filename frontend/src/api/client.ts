@@ -87,7 +87,7 @@ function createApiClient(): AxiosInstance {
             originalRequest.headers['Authorization'] = `Bearer ${access_token}`
             return instance(originalRequest)
           } catch {
-            // Refresh failed — clear auth and redirect
+            // Refresh failed — clear auth and redirect to product selector
             localStorage.removeItem('regtech-auth')
             window.location.href = '/login'
             return Promise.reject(error)
@@ -98,7 +98,15 @@ function createApiClient(): AxiosInstance {
 
         // No refresh token available — log out
         localStorage.removeItem('regtech-auth')
-        window.location.href = '/login'
+        // Redirect to last known product login or selector
+        const orgType = (() => {
+          try {
+            const raw = localStorage.getItem('regtech-auth')
+            if (raw) return JSON.parse(raw)?.state?.user?.organization_type ?? ''
+          } catch { return '' }
+          return ''
+        })()
+        window.location.href = orgType === 'fintech' ? '/login/fintech' : '/login/compliance'
       }
 
       return Promise.reject(error)
@@ -128,10 +136,11 @@ export interface HealthResponse {
 export async function loginApi(
   email: string,
   password: string,
+  product?: string,
 ): Promise<TokenResponse> {
   const res = await axios.post<TokenResponse>(
     `${BASE_URL}/api/v1/auth/login`,
-    { email, password },
+    { email, password, product: product ?? null },
   )
   return res.data
 }

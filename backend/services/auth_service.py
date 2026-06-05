@@ -145,11 +145,11 @@ class AuthService:
         """
         refresh_key = f"{REFRESH_PREFIX}{refresh_token}"
 
-        # Atomically delete old token and read user_id.
-        # GETDEL is atomic — if it returns None the token was already used.
-        user_id = await self.redis.getdel(refresh_key)
+        # Use GET + DELETE for Redis < 6.2 compatibility (GETDEL requires Redis 6.2+)
+        user_id = await self.redis.get(refresh_key)
         if user_id is None:
             raise InvalidRefreshTokenError()
+        await self.redis.delete(refresh_key)
 
         # Look up user to get current role/permissions.
         from sqlalchemy import select

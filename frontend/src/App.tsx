@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { LandingPage } from './pages/LandingPage'
+import { ProductSelectPage } from './pages/ProductSelectPage'
 import { OnboardingPage } from './pages/portal/OnboardingPage'
 import { PortalStatus } from './pages/portal/PortalStatus'
 import { ApplicantLoginPage } from './pages/applicant/ApplicantLoginPage'
@@ -26,6 +27,13 @@ import { SettingsPage } from './pages/SettingsPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { ChatPage } from './pages/ChatPage'
+import { FintechDashboardPage } from './pages/fintech/FintechDashboardPage'
+import { JobsPage } from './pages/fintech/JobsPage'
+import { JobFormPage } from './pages/fintech/JobFormPage'
+import { JobDetailPage } from './pages/fintech/JobDetailPage'
+import { CareersJobsPage } from './pages/careers/CareersJobsPage'
+import { CareersApplyPage } from './pages/careers/CareersApplyPage'
+import { CareersStatusPage } from './pages/careers/CareersStatusPage'
 
 export default function App() {
   return (
@@ -33,8 +41,15 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<ProductSelectPage />} />
+        <Route path="/login/compliance" element={<LoginPage />} />
+        <Route path="/login/fintech" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        {/* Public Careers Portal — no login required */}
+        <Route path="/careers"              element={<CareersJobsPage />} />
+        <Route path="/careers/status"       element={<CareersStatusPage />} />
+        <Route path="/careers/:jobId"       element={<CareersApplyPage />} />
+
         <Route path="/portal/apply" element={<OnboardingPage />} />
         <Route path="/portal/status" element={<PortalStatus />} />
 
@@ -71,6 +86,15 @@ export default function App() {
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
+
+        {/* Fintech platform — protected */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/fintech/dashboard"        element={<FintechDashboardPage />} />
+          <Route path="/fintech/jobs"             element={<JobsPage />} />
+          <Route path="/fintech/jobs/new"         element={<JobFormPage />} />
+          <Route path="/fintech/jobs/:jobId"      element={<JobDetailPage />} />
+          <Route path="/fintech/jobs/:jobId/edit" element={<JobFormPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   )
