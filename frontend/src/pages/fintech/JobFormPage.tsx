@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Save, ArrowLeft } from 'lucide-react'
-import { recruitmentApi, Job } from '../../api/recruitment'
+import { recruitmentApi} from '../../api/recruitment'
 import { Spinner } from '../../components/Spinner'
 import { Alert } from '../../components/Alert'
 import { FintechLayout } from './FintechLayout'
@@ -62,7 +62,8 @@ export function JobFormPage() {
         salary_max: form.salary_max ? Number(form.salary_max) : null,
         description: form.description.trim(),
         requirements: form.requirements.trim(),
-        status: form.status,
+        // status: form.status,
+        status: form.status as 'open' | 'closed' | 'draft' | 'paused',
       }
       if (isEdit && jobId) {
         await recruitmentApi.updateJob(jobId, payload)

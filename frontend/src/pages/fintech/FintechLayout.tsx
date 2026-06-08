@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Layers, BriefcaseBusiness, Users, CalendarDays, Wallet,
-  BarChart3, Settings, LogOut, Bell, ChevronRight, Globe,
+  BarChart3, Settings, LogOut, Bell, Globe,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { useSearchParams,Link } from 'react-router-dom'
 import {
   MapPin, Clock, BriefcaseBusiness, Search, ArrowRight,
   ChevronRight, Building2,
@@ -17,7 +17,7 @@ const EMP_LABELS: Record<string, string> = {
 
 export function CareersJobsPage() {
   const [params] = useSearchParams()
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const companySlug = params.get('company') ?? ''
 
   const [company, setCompany] = useState('')

@@ -254,7 +254,7 @@ export function JobDetailPage() {
 // ── Candidate Detail Panel ────────────────────────────────────────────────────
 
 function CandidateDetailPanel({
-  candidate, job, screeningResult, screening, onScreen, onStageChange,
+  candidate, screeningResult, screening, onScreen, onStageChange,
 }: {
   candidate: Candidate
   job: Job

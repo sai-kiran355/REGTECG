@@ -62,7 +62,7 @@ export function LoginPage() {
     }
   }
 
-  const accent    = isFintech ? 'violet' : 'blue'
+  // const accent    = isFintech ? 'violet' : 'blue'
   const Icon      = isFintech ? Layers : ShieldCheck
   const iconBg    = isFintech ? 'bg-violet-500/15 border-violet-500/20' : 'bg-blue-500/15 border-blue-500/20'
   const iconColor = isFintech ? 'text-violet-400' : 'text-blue-400'

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  Users, BriefcaseBusiness, Clock, BarChart3,
+  Users, BriefcaseBusiness, Clock,
   UserCheck, CalendarDays, FileText, TrendingUp,
   Wallet, Globe, ChevronRight,
 } from 'lucide-react'

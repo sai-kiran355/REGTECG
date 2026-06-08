@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, Search, BriefcaseBusiness, MapPin, Clock, Users,
-  ChevronRight, Filter, Pencil, Trash2, ToggleLeft, ToggleRight, Share2, Copy,
+  ChevronRight, Pencil, Trash2, ToggleLeft, ToggleRight, Share2, Copy,
 } from 'lucide-react'
 import { recruitmentApi, Job } from '../../api/recruitment'
 import { Spinner } from '../../components/Spinner'
