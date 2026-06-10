@@ -52,7 +52,7 @@ const modules = [
     icon: TrendingUp,
     color: 'bg-teal-600',
     route: '/fintech/analytics',
-    badge: 'Coming Soon',
+    badge: 'Active',
     features: ['Attrition Prediction', 'Performance Reports', 'Headcount Planning', 'AI Insights'],
   },
   {

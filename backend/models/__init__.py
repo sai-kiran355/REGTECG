@@ -18,6 +18,7 @@ from models.chat_message import ChatMessage
 from models.employee import Employee
 from models.attendance import AttendanceLog, LeaveRequest, ShiftSchedule
 from models.payroll import SalaryStructure, PayrollLog
+from models.analytics import PerformanceReview, HeadcountPlan, AttritionPrediction
 
 __all__ = [
     "Tenant", "Role", "RolePermission", "User",
@@ -25,4 +26,5 @@ __all__ = [
     "KYCDocument", "ApplicantAccount", "ChatMessage", "Employee",
     "AttendanceLog", "LeaveRequest", "ShiftSchedule",
     "SalaryStructure", "PayrollLog",
+    "PerformanceReview", "HeadcountPlan", "AttritionPrediction",
 ]
