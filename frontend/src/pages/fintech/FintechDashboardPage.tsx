@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, BriefcaseBusiness, Clock,
@@ -6,32 +7,26 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { FintechLayout } from './FintechLayout'
-
-const stats = [
-  { label: 'Total Employees',    value: '—', icon: Users,             color: 'bg-blue-50 text-blue-600'   },
-  { label: 'Open Positions',     value: '—', icon: BriefcaseBusiness, color: 'bg-violet-50 text-violet-600' },
-  { label: 'Present Today',      value: '—', icon: Clock,             color: 'bg-green-50 text-green-600'  },
-  { label: 'Pending Approvals',  value: '—', icon: FileText,          color: 'bg-orange-50 text-orange-600' },
-]
+import { recruitmentApi } from '../../api/recruitment'
 
 const modules = [
   {
     title: 'Recruitment & ATS',
-    desc: 'AI-powered resume screening, smart job matching, candidate ranking, and automated interview scheduling.',
+    desc: 'AI-powered resume screening, smart job matching, candidate ranking, and automated candidate hiring pipelines.',
     icon: UserCheck,
     color: 'bg-blue-600',
-    route: '/fintech/recruitment',
-    badge: 'Coming Soon',
-    features: ['AI Resume Screening', 'Candidate Ranking', 'Interview Scheduling', 'Job Board Integration'],
+    route: '/fintech/jobs',
+    badge: 'Active',
+    features: ['AI Resume Screening', 'Candidate Ranking', 'Stage Pipelines', 'Job Posting & Details'],
   },
   {
     title: 'Employee Management',
-    desc: 'Digital onboarding, employee records, document management, and e-signature workflows.',
+    desc: 'Digital onboarding, employee records, document management, and direct checklist workflows.',
     icon: Users,
     color: 'bg-violet-600',
     route: '/fintech/employees',
-    badge: 'Coming Soon',
-    features: ['Digital Onboarding', 'Employee Records', 'Document Vault', 'E-Signature Support'],
+    badge: 'Active',
+    features: ['Digital Onboarding', 'Employee Records', 'Document Vault', 'Interactive Checklist'],
   },
   {
     title: 'Attendance & Workforce',
@@ -75,6 +70,31 @@ export function FintechDashboardPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
+  const [totalEmployees, setTotalEmployees] = useState<number | string>('—')
+  const [openPositions, setOpenPositions] = useState<number | string>('—')
+  const [onboardingCount, setOnboardingCount] = useState<number | string>('—')
+  const [flaggedCount, setFlaggedCount] = useState<number | string>('—')
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const [empStats, jobsData] = await Promise.all([
+          recruitmentApi.getEmployeeStats(),
+          recruitmentApi.listJobs(),
+        ])
+        setTotalEmployees(empStats.total)
+        setOnboardingCount(empStats.onboarding)
+        setFlaggedCount(empStats.flagged)
+        
+        const openCount = jobsData.items.filter(j => j.status === 'open').length
+        setOpenPositions(openCount)
+      } catch (err) {
+        console.error("Failed to load dashboard metrics", err)
+      }
+    }
+    loadStats()
+  }, [])
+
   return (
     <FintechLayout title="Dashboard" subtitle="Welcome to your Fintech platform">
       <div className="space-y-8">
@@ -93,7 +113,12 @@ export function FintechDashboardPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map(s => {
+          {[
+            { label: 'Total Employees', value: totalEmployees, icon: Users, color: 'bg-blue-50 text-blue-600' },
+            { label: 'Open Positions', value: openPositions, icon: BriefcaseBusiness, color: 'bg-violet-50 text-violet-600' },
+            { label: 'Onboarding Staff', value: onboardingCount, icon: Clock, color: 'bg-green-50 text-green-600' },
+            { label: 'Compliance Flagged', value: flaggedCount, icon: FileText, color: 'bg-red-50 text-red-600' },
+          ].map(s => {
             const Icon = s.icon
             return (
               <div key={s.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -113,15 +138,32 @@ export function FintechDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {modules.map(m => {
               const Icon = m.icon
+              const isActive = m.badge === 'Active'
               return (
-                <div key={m.title} className="group rounded-2xl border border-gray-100 bg-white p-6 hover:border-violet-200 hover:shadow-md transition-all">
+                <div
+                  key={m.title}
+                  onClick={() => isActive && navigate(m.route)}
+                  className={`group rounded-2xl border bg-white p-6 transition-all ${
+                    isActive
+                      ? 'border-gray-100 hover:border-violet-200 hover:shadow-md cursor-pointer hover:scale-[1.01]'
+                      : 'border-gray-100 opacity-80'
+                  }`}
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${m.color}`}>
                       <Icon className="h-5 w-5 text-white" />
                     </div>
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500">{m.badge}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      isActive
+                        ? 'bg-green-50 text-green-700 border border-green-100'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {m.badge}
+                    </span>
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-1.5">{m.title}</h3>
+                  <h3 className="font-semibold text-gray-900 mb-1.5 flex items-center gap-1 group-hover:text-violet-700 transition-colors">
+                    {m.title} {isActive && <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-violet-600" />}
+                  </h3>
                   <p className="text-sm text-gray-500 mb-4 leading-relaxed">{m.desc}</p>
                   <ul className="space-y-1.5">
                     {m.features.map(f => (

@@ -299,6 +299,11 @@ async def create_employee(
     kyc_status: str = "pending",
     manager_name: str | None = None,
     hire_date: datetime.date | None = None,
+    dob: datetime.date | None = None,
+    address: str | None = None,
+    bank_details: str | None = None,
+    education: str | None = None,
+    uploaded_docs: str | None = None,
 ) -> Employee:
     import datetime
     if not hire_date:
@@ -314,6 +319,11 @@ async def create_employee(
         kyc_status=kyc_status,
         manager_name=manager_name,
         hire_date=hire_date,
+        dob=dob,
+        address=address,
+        bank_details=bank_details,
+        education=education,
+        uploaded_docs=uploaded_docs,
     )
     db.add(employee)
     await db.flush()

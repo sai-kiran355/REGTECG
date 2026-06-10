@@ -149,6 +149,8 @@ class TenantMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         if request.url.path.startswith("/api/v1/careers/"):
             return await call_next(request)
+        if "/public" in request.url.path or "/public-onboard" in request.url.path or "/upload-doc" in request.url.path or "/download-doc" in request.url.path:
+            return await call_next(request)
         # Extract X-Tenant-ID header.
         tenant_header = request.headers.get("X-Tenant-ID", "").strip()
         if not tenant_header:

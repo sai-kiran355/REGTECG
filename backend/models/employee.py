@@ -60,5 +60,11 @@ class Employee(Base):
     manager_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     hire_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
 
+    dob: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    bank_details: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    education: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    uploaded_docs: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+
     # Relationship
     tenant: Mapped["Tenant"] = relationship("Tenant", foreign_keys=[tenant_id], lazy="selectin")  # noqa: F821

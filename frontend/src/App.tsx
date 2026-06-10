@@ -32,6 +32,7 @@ import { JobsPage } from './pages/fintech/JobsPage'
 import { JobFormPage } from './pages/fintech/JobFormPage'
 import { JobDetailPage } from './pages/fintech/JobDetailPage'
 import { EmployeesPage } from './pages/fintech/EmployeesPage'
+import { OnboardingPortalPage } from './pages/fintech/OnboardingPortalPage'
 import { CareersJobsPage } from './pages/careers/CareersJobsPage'
 import { CareersApplyPage } from './pages/careers/CareersApplyPage'
 import { CareersStatusPage } from './pages/careers/CareersStatusPage'
@@ -86,6 +87,7 @@ export default function App() {
           </Route>
         </Route>
 
+        <Route path="/onboard/:employeeId" element={<OnboardingPortalPage />} />
         <Route path="*" element={<NotFoundPage />} />
 
         {/* Fintech platform — protected */}

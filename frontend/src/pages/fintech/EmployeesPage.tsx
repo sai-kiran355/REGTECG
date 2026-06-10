@@ -3,6 +3,7 @@ import {
   Users, Search, UserPlus, Mail, Phone,
   Calendar, ShieldCheck, ShieldAlert, ShieldQuestion,
   Building, UserCheck, Trash2, X, RefreshCw, FileText, Download, Upload,
+  Copy, Check, ExternalLink, Award, Eye,
 } from 'lucide-react'
 import { recruitmentApi, Employee, EmployeeStats } from '../../api/recruitment'
 import { Spinner } from '../../components/Spinner'
@@ -34,6 +35,30 @@ const KYC_CONFIG: Record<string, { label: string; color: string; icon: any }> = 
   flagged:  { label: 'Sanctions Flagged', color: 'bg-red-100 text-red-800', icon: ShieldAlert },
 }
 
+const parseBankDetails = (str: string | null) => {
+  if (!str) return null
+  const parts = str.split(' | ')
+  if (parts.length < 3) return { raw: str, name: '', account: '', ifsc: '' }
+  return {
+    raw: null,
+    name: parts[0],
+    account: parts[1]?.replace('A/C: ', '') || '',
+    ifsc: parts[2]?.replace('IFSC: ', '') || '',
+  }
+}
+
+const parseEducation = (str: string | null) => {
+  if (!str) return null
+  const parts = str.split(' | ')
+  if (parts.length < 3) return { raw: str, edu10: '', edu12: '', college: '' }
+  return {
+    raw: null,
+    edu10: parts[0]?.replace('10th: ', '') || '',
+    edu12: parts[1]?.replace('12th: ', '') || '',
+    college: parts[2]?.replace('B.Tech/College: ', '') || '',
+  }
+}
+
 export function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [stats, setStats] = useState<EmployeeStats | null>(null)
@@ -62,6 +87,8 @@ export function EmployeesPage() {
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [drawerTab, setDrawerTab] = useState<'profile' | 'tasks' | 'documents'>('profile')
+  const [showESignModal, setShowESignModal] = useState(false)
+  const [signName, setSignName] = useState('')
 
   // Tasks checklist state
   const [tasks, setTasks] = useState<Record<string, boolean>>({
@@ -71,9 +98,17 @@ export function EmployeesPage() {
     assets: false,
   })
 
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [hrChecks, setHrChecks] = useState({
+    aadhaar: false,
+    academic: false,
+    bank: false,
+  })
+
   // Load tasks when selectedEmployee changes
   useEffect(() => {
     if (selectedEmployee) {
+      setHrChecks({ aadhaar: false, academic: false, bank: false })
       const saved = localStorage.getItem(`employee_tasks_${selectedEmployee.id}`)
       if (saved) {
         try {
@@ -611,6 +646,46 @@ export function EmployeesPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {drawerTab === 'profile' && (
                 <div className="space-y-6">
+                  {(selectedEmployee.status === 'onboarding' || selectedEmployee.status === 'active') && (
+                    <div className="bg-gradient-to-br from-violet-50 to-indigo-50/50 rounded-2xl p-5 border border-violet-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-violet-750 uppercase tracking-wider flex items-center gap-1">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>Digital Onboarding Link</span>
+                        </h4>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          selectedEmployee.status === 'onboarding'
+                            ? 'bg-violet-100 text-violet-850'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {selectedEmployee.status === 'onboarding' ? 'Pending Self-Submission' : 'Onboarding Complete'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 leading-normal">
+                        Candidate needs to complete their profile, bank details, upload credentials and e-sign the contract. Copy and email this link to the employee:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${window.location.origin}/onboard/${selectedEmployee.id}`}
+                          className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono text-gray-600 focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/onboard/${selectedEmployee.id}`)
+                            setCopiedLink(true)
+                            setTimeout(() => setCopiedLink(false), 2000)
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold transition-colors shrink-0"
+                        >
+                          {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Org & Role details */}
                   <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 space-y-4">
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Employment Details</h4>
@@ -702,6 +777,165 @@ export function EmployeesPage() {
                       {scanningId === selectedEmployee.id ? 'Scanning Watchlists...' : 'Run Sanctions Watchlist Scan'}
                     </button>
                   </div>
+
+                  {/* Submitted details from Employee Self-Service */}
+                  {(selectedEmployee.dob || selectedEmployee.address || selectedEmployee.bank_details || selectedEmployee.education) && (
+                    <div className="space-y-4 pt-2">
+                      <h4 className="text-xs font-bold text-gray-450 uppercase tracking-wider">Employee Self-Submitted Data</h4>
+                      
+                      {/* Personal Information */}
+                      {(selectedEmployee.dob || selectedEmployee.address) && (
+                        <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 space-y-3">
+                          <h5 className="text-xs font-semibold text-gray-700">Personal & Mailing Address</h5>
+                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                            {selectedEmployee.dob && (
+                              <div>
+                                <p className="text-gray-400 text-xs">Date of Birth</p>
+                                <p className="font-semibold text-gray-800 mt-0.5">
+                                  {new Date(selectedEmployee.dob).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                  })}
+                                </p>
+                              </div>
+                            )}
+                            {selectedEmployee.address && (
+                              <div className="col-span-2">
+                                <p className="text-gray-400 text-xs">Current Mailing Address</p>
+                                <p className="font-semibold text-gray-800 mt-0.5 whitespace-pre-wrap">{selectedEmployee.address}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bank & Payroll Details */}
+                      {selectedEmployee.bank_details && (() => {
+                        const bank = parseBankDetails(selectedEmployee.bank_details)
+                        return bank ? (
+                          <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 space-y-3">
+                            <h5 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                              <Building className="h-4 w-4 text-violet-500" />
+                              <span>Bank Account (For Payroll Disbursements)</span>
+                            </h5>
+                            {bank.raw ? (
+                              <p className="text-sm font-semibold text-gray-800">{bank.raw}</p>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                <div>
+                                  <p className="text-gray-400 text-xs">Bank Name</p>
+                                  <p className="font-semibold text-gray-850 mt-0.5">{bank.name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-400 text-xs">Account Number</p>
+                                  <p className="font-mono font-semibold text-gray-850 mt-0.5">{bank.account}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-400 text-xs">IFSC Code</p>
+                                  <p className="font-mono font-semibold text-gray-850 mt-0.5 uppercase">{bank.ifsc}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null
+                      })()}
+
+                      {/* Academic Qualifications */}
+                      {selectedEmployee.education && (() => {
+                        const edu = parseEducation(selectedEmployee.education)
+                        return edu ? (
+                          <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 space-y-3">
+                            <h5 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                              <Award className="h-4 w-4 text-violet-500" />
+                              <span>Academic Certificates & Scores</span>
+                            </h5>
+                            {edu.raw ? (
+                              <p className="text-sm font-semibold text-gray-800">{edu.raw}</p>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-3 text-xs text-gray-600">
+                                <div>
+                                  <p className="text-gray-450">10th Score</p>
+                                  <p className="font-semibold text-gray-800 mt-0.5">{edu.edu10}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-450">12th Score</p>
+                                  <p className="font-semibold text-gray-800 mt-0.5">{edu.edu12}</p>
+                                </div>
+                                <div className="col-span-3 sm:col-span-1">
+                                  <p className="text-gray-455">Degree & College</p>
+                                  <p className="font-semibold text-gray-800 mt-0.5 truncate" title={edu.college}>{edu.college}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
+                  )}
+
+                  {/* HR Admin Verification & Approval Panel */}
+                  {selectedEmployee.status === 'onboarding' && (
+                    <div className="bg-gradient-to-br from-violet-50/40 to-indigo-50/20 rounded-2xl p-5 border border-violet-100 space-y-4 mt-2">
+                      <h5 className="text-xs font-bold text-violet-850 uppercase tracking-wider flex items-center gap-1.5">
+                        <UserCheck className="h-4 w-4 text-violet-650" />
+                        <span>HR Verification Checklist</span>
+                      </h5>
+                      
+                      <div className="space-y-2.5">
+                        {[
+                          { key: 'aadhaar', label: 'Verify National ID Proof (Aadhaar)' },
+                          { key: 'academic', label: 'Verify Academic Certificates (10th/Inter/Degree)' },
+                          { key: 'bank', label: 'Verify Bank Details for Salary Payroll' },
+                        ].map(check => (
+                          <label key={check.key} className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={hrChecks[check.key as keyof typeof hrChecks]}
+                              onChange={() => setHrChecks(prev => ({ ...prev, [check.key]: !prev[check.key as keyof typeof hrChecks] }))}
+                              className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                            />
+                            <span className={hrChecks[check.key as keyof typeof hrChecks] ? 'line-through text-gray-400' : 'font-medium text-gray-750'}>
+                              {check.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!(hrChecks.aadhaar && hrChecks.academic && hrChecks.bank)}
+                        onClick={async () => {
+                          try {
+                            const updated = await recruitmentApi.updateEmployee(selectedEmployee.id, {
+                              status: 'active',
+                              kyc_status: 'verified',
+                            })
+                            
+                            // Update the local list
+                            setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? updated : e))
+                            setSelectedEmployee(updated)
+                            
+                            // Sync onboarding tasks checklist as fully complete
+                            const fullTasks = { agreement: true, identity: true, email: true, assets: true }
+                            setTasks(fullTasks)
+                            localStorage.setItem(`employee_tasks_${selectedEmployee.id}`, JSON.stringify(fullTasks))
+                            
+                            // Show simulated welcome mail sending alert
+                            alert(`Employee onboarding approved!\n\nWelcome notification email has been successfully sent to ${selectedEmployee.full_name} (${selectedEmployee.email}) with their corporate login details!`);
+                            
+                            const statsData = await recruitmentApi.getEmployeeStats()
+                            setStats(statsData)
+                          } catch {
+                            setError('Failed to approve employee onboarding.')
+                          }
+                        }}
+                        className="w-full py-2.5 rounded-xl font-semibold text-xs text-white bg-violet-600 hover:bg-violet-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Approve & Activate Employee
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -734,11 +968,29 @@ export function EmployeesPage() {
                           onChange={() => handleToggleTask(task.key)}
                           className="mt-1 h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
                         />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className={`text-sm font-semibold ${tasks[task.key] ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
                             {task.label}
                           </p>
                           <p className="text-xs text-gray-400 mt-1">{task.desc}</p>
+                          {task.key === 'agreement' && !tasks[task.key] && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowESignModal(true);
+                              }}
+                              className="mt-2 inline-flex items-center gap-1 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1 text-xs font-bold text-white transition-colors"
+                            >
+                              Sign via E-Sign
+                            </button>
+                          )}
+                          {task.key === 'agreement' && tasks[task.key] && (
+                            <span className="mt-2 inline-block rounded-md bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-100">
+                              e-Signed via Aadhaar
+                            </span>
+                          )}
                         </div>
                       </label>
                     ))}
@@ -779,30 +1031,120 @@ export function EmployeesPage() {
                 <div className="space-y-6">
                   {/* File List */}
                   <div className="space-y-3">
-                    {[
-                      { name: 'employment_contract_signed.pdf', size: '2.4 MB', type: 'Employment' },
-                      { name: 'national_id_card.jpg', size: '1.2 MB', type: 'KYC Proof' },
-                      { name: 'academic_transcript.pdf', size: '920 KB', type: 'Education' },
-                    ].map(file => (
-                      <div key={file.name} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-white hover:border-gray-200 hover:shadow-xs transition-all">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2 bg-gray-50 text-gray-500 rounded-lg shrink-0">
-                            <FileText className="h-5 w-5" />
+                    {(() => {
+                      const docList = []
+                      
+                      // 1. Employment Contract
+                      if (tasks.agreement) {
+                        docList.push({ name: 'employment_contract_signed.pdf', size: '2.4 MB', type: 'Employment Contract', signed: true, pending: false })
+                      } else {
+                        docList.push({ name: 'employment_contract_draft.pdf', size: '1.8 MB', type: 'Draft Contract', signed: false, pending: false })
+                      }
+                      
+                      // 2. Parsed uploaded docs from the self-service portal
+                      if (selectedEmployee.uploaded_docs) {
+                        const entries = selectedEmployee.uploaded_docs.split(',').map(s => s.trim()).filter(Boolean)
+                        entries.forEach(entry => {
+                          if (entry.includes(':')) {
+                            const [docType, filename] = entry.split(':')
+                            const typeMap: Record<string, string> = {
+                              aadhaar: 'National ID (Aadhaar)',
+                              cert10th: '10th Class Certificate',
+                              cert12th: 'Intermediate Certificate',
+                              degree: 'B.Tech/Degree Certificate',
+                            }
+                            docList.push({
+                              name: filename,
+                              size: 'Uploaded via Portal',
+                              type: typeMap[docType] || 'Uploaded Document',
+                              signed: false,
+                              pending: false,
+                              docType: docType,
+                            })
+                          } else {
+                            const docName = entry
+                            if (docName === 'Aadhaar Card') {
+                              docList.push({ name: 'aadhaar_card.pdf', size: '1.4 MB', type: 'National ID', signed: false, pending: false, docType: 'aadhaar' })
+                            } else if (docName === '10th Certificate') {
+                              docList.push({ name: 'marksheet_10th.pdf', size: '1.1 MB', type: 'Academic Certificate', signed: false, pending: false, docType: 'cert10th' })
+                            } else if (docName === 'Intermediate Certificate') {
+                              docList.push({ name: 'marksheet_12th.pdf', size: '1.2 MB', type: 'Academic Certificate', signed: false, pending: false, docType: 'cert12th' })
+                            } else if (docName === 'B.Tech/Degree Certificate') {
+                              docList.push({ name: 'degree_graduation.pdf', size: '2.1 MB', type: 'Degree Certificate', signed: false, pending: false, docType: 'degree' })
+                            } else {
+                              docList.push({
+                                name: `${docName.toLowerCase().replace(/\s+/g, '_')}.pdf`,
+                                size: '1.5 MB',
+                                type: 'Uploaded Document',
+                                signed: false,
+                                pending: false,
+                                docType: 'other'
+                              })
+                            }
+                          }
+                        })
+                      } else {
+                        // Standard placeholders for visualization prior to self-service submission
+                        docList.push({ name: 'aadhaar_card_placeholder.pdf', size: 'Pending Upload', type: 'National ID', signed: false, pending: true, docType: 'aadhaar' })
+                        docList.push({ name: 'academic_transcript_placeholder.pdf', size: 'Pending Upload', type: 'Education', signed: false, pending: true, docType: 'cert10th' })
+                      }
+
+                      return docList.map(file => (
+                        <div key={file.name} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                          file.pending ? 'border-dashed border-gray-200 bg-gray-50/30 opacity-60' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-xs'
+                        }`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 bg-gray-50 text-gray-500 rounded-lg shrink-0">
+                              <FileText className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={`text-sm font-semibold truncate ${file.pending ? 'text-gray-400' : 'text-gray-800'}`}>{file.name}</p>
+                                {file.signed && (
+                                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-[8px] font-bold text-green-700 border border-green-100">
+                                    e-Signed
+                                  </span>
+                                )}
+                                {file.pending && (
+                                  <span className="rounded-full bg-yellow-50 px-2 py-0.5 text-[8px] font-bold text-yellow-700 border border-yellow-100 animate-pulse">
+                                    Awaiting upload
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-0.5">{file.size} · <span className="font-medium text-gray-500">{file.type}</span></p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{file.name}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{file.size} · <span className="font-medium text-gray-500">{file.type}</span></p>
-                          </div>
+                          {!file.pending && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {file.docType && file.docType !== 'other' && (
+                                <button
+                                  onClick={() => {
+                                    window.open(recruitmentApi.getEmployeeDocUrl(selectedEmployee.id, file.docType!), '_blank')
+                                  }}
+                                  className="p-2 text-gray-400 hover:bg-violet-50 hover:text-violet-600 transition-colors border border-gray-200 rounded-lg"
+                                  title="View document inline"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  if (file.docType && file.docType !== 'other') {
+                                    window.open(recruitmentApi.getEmployeeDocUrl(selectedEmployee.id, file.docType, true), '_blank')
+                                  } else {
+                                    alert(`Downloading simulated file: ${file.name}`)
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors border border-gray-200 rounded-lg"
+                                title="Download file"
+                              >
+                                <Download className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <button
-                          onClick={() => alert(`Downloading simulated file: ${file.name}`)}
-                          className="p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors border border-gray-55 rounded-lg shrink-0"
-                          title="Download file"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                      ))
+                    })()}
                   </div>
 
                   {/* Upload Zone */}
@@ -844,6 +1186,87 @@ export function EmployeesPage() {
                   className="rounded-xl bg-gray-900 hover:bg-gray-800 text-xs font-semibold text-white px-4 py-2.5 transition-colors"
                 >
                   Close Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* E-Signature Modal */}
+        {showESignModal && selectedEmployee && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+            <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">E-Sign Employment Agreement</h3>
+              <p className="text-xs text-gray-400 mb-4">
+                Please review the terms and sign the agreement document for <strong>{selectedEmployee.full_name}</strong>.
+              </p>
+
+              {/* Scrollable document copy */}
+              <div className="border border-gray-105 rounded-xl p-4 bg-gray-50 max-h-[160px] overflow-y-auto text-[10px] text-gray-500 leading-relaxed font-mono mb-4">
+                <p className="font-bold text-gray-700 mb-2">EMPLOYMENT & NDA AGREEMENT</p>
+                <p className="mb-2">
+                  This Agreement is entered into on this day by and between the Employer and {selectedEmployee.full_name} (the "Employee").
+                </p>
+                <p className="mb-2">
+                  1. POSITION AND DUTIES. The Employee shall serve in the capacity of {selectedEmployee.job_title} under the {selectedEmployee.department} department, reporting directly to {selectedEmployee.manager_name || "the direct supervisor"}.
+                </p>
+                <p className="mb-2">
+                  2. CONFIDENTIALITY. The Employee agrees that during and after employment, they shall not disclose any proprietary financial code, consumer data, or trade secrets to any third party.
+                </p>
+                <p>
+                  3. GOVERNING LAW. This agreement is governed by the employment laws of the jurisdiction of incorporation.
+                </p>
+              </div>
+
+              {/* E-Sign fields */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Type Full Name to Sign *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul Sharma"
+                    value={signName}
+                    onChange={e => setSignName(e.target.value)}
+                    className="w-full px-3.5 py-2 border border-gray-200 rounded-xl text-sm focus:border-violet-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Signature Preview */}
+                <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-violet-50/20 text-center flex flex-col items-center justify-center min-h-[90px]">
+                  {signName ? (
+                    <div>
+                      <p className="font-serif italic text-3xl text-indigo-900 border-b border-dashed border-gray-300 px-6 pb-2 inline-block">
+                        {signName}
+                      </p>
+                      <p className="text-[9px] text-gray-400 mt-2">ComplianceOS Secure E-Sign Certificate: SHA-256 Verified</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Signature preview will appear here</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end gap-3 mt-6 border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowESignModal(false); setSignName('') }}
+                  className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!signName}
+                  onClick={() => {
+                    handleToggleTask('agreement');
+                    setShowESignModal(false);
+                    setSignName('');
+                  }}
+                  className="rounded-xl bg-violet-600 hover:bg-violet-700 font-semibold text-sm text-white px-5 py-2 transition-colors disabled:opacity-50"
+                >
+                  Sign Document
                 </button>
               </div>
             </div>

@@ -737,7 +737,46 @@ async def create_employee_endpoint(
         kyc_status=body.kyc_status,
         manager_name=body.manager_name,
         hire_date=body.hire_date,
+        dob=body.dob,
+        address=body.address,
+        bank_details=body.bank_details,
+        education=body.education,
+        uploaded_docs=body.uploaded_docs,
     )
+    await db.commit()
+    await db.refresh(employee)
+    return employee
+@router.get("/employees/{employee_id}/public", response_model=EmployeeResponse)
+async def get_public_employee_endpoint(
+    employee_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> EmployeeResponse:
+    """Public endpoint to get basic employee information for onboarding."""
+    from sqlalchemy import select
+    from models.employee import Employee
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+    return employee
+
+
+@router.put("/employees/{employee_id}/public-onboard", response_model=EmployeeResponse)
+async def public_onboard_employee_endpoint(
+    employee_id: uuid.UUID,
+    body: EmployeeUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> EmployeeResponse:
+    """Public endpoint for employees to submit their digital onboarding details."""
+    from sqlalchemy import select
+    from models.employee import Employee
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+
+    updates = body.model_dump(exclude_unset=True)
+    employee = await update_employee(db, employee, **updates)
     await db.commit()
     await db.refresh(employee)
     return employee
@@ -817,4 +856,103 @@ async def promote_candidate_endpoint(
     await db.commit()
     await db.refresh(employee)
     return employee
+
+
+# ── Employee Document Upload & View ──────────────────────────────────────────
+
+from fastapi import File, UploadFile
+from fastapi.responses import FileResponse
+import os
+import shutil
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+@router.post("/employees/{employee_id}/upload-doc")
+async def upload_employee_doc_endpoint(
+    employee_id: uuid.UUID,
+    doc_type: str,  # e.g. "aadhaar", "cert10th", "cert12th", "degree"
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Public endpoint to upload a document for an employee onboarding session."""
+    from sqlalchemy import select
+    from models.employee import Employee
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+
+    # Create directory: uploads/{employee_id}
+    emp_dir = os.path.join(UPLOAD_DIR, str(employee_id))
+    os.makedirs(emp_dir, exist_ok=True)
+
+    # Clean and resolve file name
+    safe_filename = "".join([c if c.isalnum() or c in (".", "_", "-") else "_" for c in file.filename])
+    file_path = os.path.join(emp_dir, f"{doc_type}_{safe_filename}")
+
+    # Write file on disk
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Update employee's uploaded_docs list in database
+    current_docs = employee.uploaded_docs or ""
+    docs_list = [d.strip() for d in current_docs.split(",") if d.strip()]
+    docs_list = [d for d in docs_list if not d.startswith(f"{doc_type}:")]
+    docs_list.append(f"{doc_type}:{safe_filename}")
+    
+    employee.uploaded_docs = ", ".join(docs_list)
+    await db.commit()
+    await db.refresh(employee)
+
+    return {"message": "File uploaded successfully", "filename": safe_filename}
+
+
+@router.get("/employees/{employee_id}/download-doc/{doc_type}")
+async def download_employee_doc_endpoint(
+    employee_id: uuid.UUID,
+    doc_type: str,
+    download: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Download or view a specific uploaded document of an employee."""
+    from sqlalchemy import select
+    from models.employee import Employee
+    result = await db.execute(select(Employee).where(Employee.id == employee_id))
+    employee = result.scalar_one_or_none()
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+
+    # Parse uploaded_docs to find the filename
+    current_docs = employee.uploaded_docs or ""
+    docs_list = [d.strip() for d in current_docs.split(",") if d.strip()]
+    filename = None
+    for d in docs_list:
+        if d.startswith(f"{doc_type}:"):
+            filename = d.replace(f"{doc_type}:", "")
+            break
+
+    if not filename:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": f"Document type '{doc_type}' not found."})
+
+    file_path = os.path.join(UPLOAD_DIR, str(employee_id), f"{doc_type}_{filename}")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail={"code": "FILE_NOT_FOUND", "message": "Document file not found on disk."})
+
+    # Set media type
+    media_type = "application/octet-stream"
+    if filename.lower().endswith(".pdf"):
+        media_type = "application/pdf"
+    elif filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        media_type = f"image/{filename.split('.')[-1].lower()}"
+
+    content_disp = "attachment" if download else "inline"
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        filename=filename if download else None,
+        content_disposition_type=content_disp,
+    )
+
 

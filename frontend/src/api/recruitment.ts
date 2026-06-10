@@ -74,6 +74,11 @@ export interface Employee {
   kyc_status: 'pending' | 'verified' | 'flagged'
   manager_name: string | null
   hire_date: string
+  dob: string | null
+  address: string | null
+  bank_details: string | null
+  education: string | null
+  uploaded_docs: string | null
   created_at: string
   updated_at: string
 }
@@ -154,6 +159,28 @@ export const recruitmentApi = {
 
   promoteCandidate: (candidateId: string) =>
     apiClient.post<Employee>(`/api/v1/recruitment/candidates/${candidateId}/promote`).then(r => r.data),
+
+  submitPublicOnboarding: (id: string, data: Partial<Employee>) =>
+    apiClient.put<Employee>(`/api/v1/recruitment/employees/${id}/public-onboard`, data).then(r => r.data),
+
+  getPublicEmployee: (id: string) =>
+    apiClient.get<Employee>(`/api/v1/recruitment/employees/${id}/public`).then(r => r.data),
+
+  uploadEmployeeDoc: (id: string, docType: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post<{ message: string; filename: string }>(
+      `/api/v1/recruitment/employees/${id}/upload-doc?doc_type=${docType}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    ).then(r => r.data)
+  },
+
+  getEmployeeDocUrl: (id: string, docType: string, download?: boolean) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+    const query = download ? '?download=true' : ''
+    return `${baseUrl}/api/v1/recruitment/employees/${id}/download-doc/${docType}${query}`
+  },
 
   getEmployeeStats: () =>
     apiClient.get<EmployeeStats>('/api/v1/recruitment/employees/stats').then(r => r.data),

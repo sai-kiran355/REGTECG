@@ -158,6 +158,11 @@ class EmployeeCreate(BaseModel):
     kyc_status: KYCStatus = "pending"
     manager_name: str | None = Field(default=None, max_length=255)
     hire_date: date | None = None
+    dob: date | None = None
+    address: str | None = None
+    bank_details: str | None = None
+    education: str | None = None
+    uploaded_docs: str | None = None
 
 
 class EmployeeUpdate(BaseModel):
@@ -170,6 +175,11 @@ class EmployeeUpdate(BaseModel):
     kyc_status: KYCStatus | None = None
     manager_name: str | None = Field(default=None, max_length=255)
     hire_date: date | None = None
+    dob: date | None = None
+    address: str | None = None
+    bank_details: str | None = None
+    education: str | None = None
+    uploaded_docs: str | None = None
 
 
 class EmployeeResponse(BaseModel):
@@ -184,6 +194,11 @@ class EmployeeResponse(BaseModel):
     kyc_status: str
     manager_name: str | None
     hire_date: date
+    dob: date | None
+    address: str | None
+    bank_details: str | None
+    education: str | None
+    uploaded_docs: str | None
     created_at: datetime
     updated_at: datetime
 
