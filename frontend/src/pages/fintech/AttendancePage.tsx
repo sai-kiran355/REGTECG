@@ -66,8 +66,10 @@ export function AttendancePage() {
         setShiftForm(prev => ({ ...prev, employee_id: empRes.items[0].id }))
         setLeaveForm(prev => ({ ...prev, employee_id: empRes.items[0].id }))
       }
-    } catch (err) {
-      setError('Failed to load attendance directory records.')
+    } catch (err: any) {
+      console.error('Attendance load error:', err)
+      const detail = err?.response?.data?.detail?.message ?? err?.message ?? ''
+      setError(`Failed to load attendance directory records. ${detail}`)
     } finally {
       setLoading(false)
     }
