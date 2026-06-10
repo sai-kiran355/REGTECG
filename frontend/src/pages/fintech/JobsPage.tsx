@@ -65,7 +65,21 @@ export function JobsPage() {
     }
   }
 
-  useEffect(() => { fetchJobs() }, [statusFilter])
+  useEffect(() => {
+    fetchJobs()
+    const interval = setInterval(() => {
+      recruitmentApi.listJobs({ status: statusFilter || undefined, page_size: 50 })
+        .then(data => {
+          setJobs(data.items)
+          setTotal(data.total)
+        })
+        .catch(err => {
+          console.debug("Background jobs fetch failed", err)
+        })
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [statusFilter])
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this job and all its candidates?')) return

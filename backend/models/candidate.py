@@ -78,7 +78,7 @@ class Candidate(Base):
     tenant: Mapped["Tenant"] = relationship("Tenant", foreign_keys=[tenant_id], lazy="selectin")  # noqa: F821
     job: Mapped["Job"] = relationship("Job", back_populates="candidates", lazy="selectin")  # noqa: F821
     resume: Mapped["CandidateResume | None"] = relationship(  # noqa: F821
-        "CandidateResume", back_populates="candidate", uselist=False, lazy="selectin"
+        "CandidateResume", back_populates="candidate", uselist=False, lazy="selectin", cascade="all, delete-orphan", passive_deletes=True
     )
 
 

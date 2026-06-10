@@ -62,6 +62,29 @@ export interface AIScreeningResult {
   recommendation: 'strong_yes' | 'yes' | 'maybe' | 'no'
 }
 
+export interface Employee {
+  id: string
+  tenant_id: string
+  full_name: string
+  email: string
+  phone: string | null
+  department: string
+  job_title: string
+  status: 'onboarding' | 'active' | 'suspended' | 'terminated'
+  kyc_status: 'pending' | 'verified' | 'flagged'
+  manager_name: string | null
+  hire_date: string
+  created_at: string
+  updated_at: string
+}
+
+export interface EmployeeStats {
+  total: number
+  active: number
+  onboarding: number
+  flagged: number
+}
+
 export interface PaginatedResponse<T> {
   items: T[]
   total: number
@@ -101,6 +124,9 @@ export const recruitmentApi = {
   updateStage: (id: string, stage: string, notes?: string) =>
     apiClient.put<Candidate>(`/api/v1/recruitment/candidates/${id}/stage`, { stage, notes }).then(r => r.data),
 
+  deleteCandidate: (id: string) =>
+    apiClient.delete(`/api/v1/recruitment/candidates/${id}`).then(r => r.data),
+
   screenCandidate: (id: string) =>
     apiClient.post<AIScreeningResult>(`/api/v1/recruitment/candidates/${id}/screen`).then(r => r.data),
 
@@ -109,4 +135,26 @@ export const recruitmentApi = {
 
   getPipelineStats: (jobId?: string) =>
     apiClient.get<PipelineStats>('/api/v1/recruitment/pipeline', { params: jobId ? { job_id: jobId } : {} }).then(r => r.data),
+
+  // Employees
+  listEmployees: (params?: { search?: string; department?: string; status?: string; page?: number; page_size?: number }) =>
+    apiClient.get<PaginatedResponse<Employee>>('/api/v1/recruitment/employees', { params }).then(r => r.data),
+
+  getEmployee: (id: string) =>
+    apiClient.get<Employee>(`/api/v1/recruitment/employees/${id}`).then(r => r.data),
+
+  createEmployee: (data: Partial<Employee>) =>
+    apiClient.post<Employee>('/api/v1/recruitment/employees', data).then(r => r.data),
+
+  updateEmployee: (id: string, data: Partial<Employee>) =>
+    apiClient.put<Employee>(`/api/v1/recruitment/employees/${id}`, data).then(r => r.data),
+
+  deleteEmployee: (id: string) =>
+    apiClient.delete(`/api/v1/recruitment/employees/${id}`).then(r => r.data),
+
+  promoteCandidate: (candidateId: string) =>
+    apiClient.post<Employee>(`/api/v1/recruitment/candidates/${candidateId}/promote`).then(r => r.data),
+
+  getEmployeeStats: () =>
+    apiClient.get<EmployeeStats>('/api/v1/recruitment/employees/stats').then(r => r.data),
 }

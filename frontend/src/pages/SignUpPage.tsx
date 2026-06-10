@@ -53,7 +53,7 @@ export function SignUpPage() {
   const selectedProduct = PRODUCTS.find(p => p.type === orgType)
 
   // Already logged in — redirect to the correct dashboard
-  if (isAuthenticated) {
+  if (isAuthenticated && !loading) {
     const dest = user?.organization_type === 'fintech' ? '/fintech/dashboard' : '/dashboard'
     return <Navigate to={dest} replace />
   }

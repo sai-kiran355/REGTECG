@@ -139,3 +139,67 @@ class AIScreeningResponse(BaseModel):
     strengths: list[str]
     gaps: list[str]
     recommendation: Literal["strong_yes", "yes", "maybe", "no"]
+
+
+# ── Employee schemas ──────────────────────────────────────────────────────────
+
+from datetime import date
+
+EmployeeStatus = Literal["onboarding", "active", "suspended", "terminated"]
+KYCStatus = Literal["pending", "verified", "flagged"]
+
+class EmployeeCreate(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=255)
+    email: EmailStr
+    phone: str | None = Field(default=None, max_length=20)
+    department: str = Field(..., min_length=1, max_length=100)
+    job_title: str = Field(..., min_length=1, max_length=100)
+    status: EmployeeStatus = "active"
+    kyc_status: KYCStatus = "pending"
+    manager_name: str | None = Field(default=None, max_length=255)
+    hire_date: date | None = None
+
+
+class EmployeeUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=20)
+    department: str | None = Field(default=None, min_length=1, max_length=100)
+    job_title: str | None = Field(default=None, min_length=1, max_length=100)
+    status: EmployeeStatus | None = None
+    kyc_status: KYCStatus | None = None
+    manager_name: str | None = Field(default=None, max_length=255)
+    hire_date: date | None = None
+
+
+class EmployeeResponse(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    full_name: str
+    email: str
+    phone: str | None
+    department: str
+    job_title: str
+    status: str
+    kyc_status: str
+    manager_name: str | None
+    hire_date: date
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EmployeeListResponse(BaseModel):
+    items: list[EmployeeResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class EmployeeStatusStats(BaseModel):
+    total: int = 0
+    active: int = 0
+    onboarding: int = 0
+    flagged: int = 0
+

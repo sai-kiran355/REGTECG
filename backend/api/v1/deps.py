@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Query
 from jose import JWTError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,6 +48,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def get_current_user(
     authorization: str | None = Header(default=None, alias="Authorization"),
+    token: str | None = Query(default=None),
     redis: aioredis.Redis = Depends(get_redis),
 ) -> JWTClaims:
     """
@@ -68,10 +69,13 @@ async def get_current_user(
     from core.redis import BLACKLIST_PREFIX
 
     if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail={"code": "MISSING_TOKEN", "message": "Authorization header is required."},
-        )
+        if token:
+            authorization = f"Bearer {token}"
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail={"code": "MISSING_TOKEN", "message": "Authorization header is required."},
+            )
 
     # Extract Bearer token.
     parts = authorization.split(" ", 1)

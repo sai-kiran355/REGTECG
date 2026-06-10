@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.job import Job
 from models.candidate import Candidate, CandidateResume
+from models.employee import Employee
 
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
@@ -229,3 +230,107 @@ async def get_pipeline_stats(
     query = query.group_by(Candidate.stage)
     result = await db.execute(query)
     return {row[0]: row[1] for row in result.all()}
+
+
+async def delete_candidate(db: AsyncSession, candidate: Candidate) -> None:
+    await db.delete(candidate)
+    await db.flush()
+
+
+# ── Employees ─────────────────────────────────────────────────────────────────
+
+async def list_employees(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    search: str | None = None,
+    department: str | None = None,
+    status: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
+) -> tuple[list[Employee], int]:
+    query = select(Employee).where(Employee.tenant_id == tenant_id)
+    count_q = select(func.count(Employee.id)).where(Employee.tenant_id == tenant_id)
+
+    if search:
+        search_term = f"%{search.strip().lower()}%"
+        filter_cond = (
+            func.lower(Employee.full_name).like(search_term) |
+            func.lower(Employee.email).like(search_term) |
+            func.lower(Employee.job_title).like(search_term)
+        )
+        query = query.where(filter_cond)
+        count_q = count_q.where(filter_cond)
+
+    if department:
+        query = query.where(Employee.department == department)
+        count_q = count_q.where(Employee.department == department)
+
+    if status:
+        query = query.where(Employee.status == status)
+        count_q = count_q.where(Employee.status == status)
+
+    total = (await db.execute(count_q)).scalar_one()
+    offset = (page - 1) * page_size
+    query = query.order_by(Employee.created_at.desc()).offset(offset).limit(page_size)
+    items = list((await db.execute(query)).scalars().all())
+    return items, total
+
+
+async def get_employee_by_id(
+    db: AsyncSession, employee_id: uuid.UUID, tenant_id: uuid.UUID
+) -> Employee | None:
+    result = await db.execute(
+        select(Employee).where(
+            Employee.id == employee_id, Employee.tenant_id == tenant_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_employee(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    full_name: str,
+    email: str,
+    phone: str | None = None,
+    department: str = "",
+    job_title: str = "",
+    status: str = "active",
+    kyc_status: str = "pending",
+    manager_name: str | None = None,
+    hire_date: datetime.date | None = None,
+) -> Employee:
+    import datetime
+    if not hire_date:
+        hire_date = datetime.date.today()
+    employee = Employee(
+        tenant_id=tenant_id,
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        department=department,
+        job_title=job_title,
+        status=status,
+        kyc_status=kyc_status,
+        manager_name=manager_name,
+        hire_date=hire_date,
+    )
+    db.add(employee)
+    await db.flush()
+    await db.refresh(employee)
+    return employee
+
+
+async def update_employee(db: AsyncSession, employee: Employee, **kwargs) -> Employee:
+    for key, value in kwargs.items():
+        setattr(employee, key, value)
+    await db.flush()
+    await db.refresh(employee)
+    return employee
+
+
+async def delete_employee(db: AsyncSession, employee: Employee) -> None:
+    await db.delete(employee)
+    await db.flush()
+
+

@@ -15,9 +15,10 @@ from models.kyc_document import KYCDocument
 from models.applicant_account import ApplicantAccount
 
 from models.chat_message import ChatMessage
+from models.employee import Employee
 
 __all__ = [
     "Tenant", "Role", "RolePermission", "User",
     "Case", "KYCRecord", "AMLAlert", "SanctionsScreening", "AuditLog",
-    "KYCDocument", "ApplicantAccount", "ChatMessage",
+    "KYCDocument", "ApplicantAccount", "ChatMessage", "Employee",
 ]

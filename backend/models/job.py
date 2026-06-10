@@ -74,4 +74,4 @@ class Job(Base):
     # Relationships
     tenant: Mapped["Tenant"] = relationship("Tenant", foreign_keys=[tenant_id], lazy="selectin")  # noqa: F821
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by], lazy="selectin")  # noqa: F821
-    candidates: Mapped[list["Candidate"]] = relationship("Candidate", back_populates="job", lazy="selectin")  # noqa: F821
+    candidates: Mapped[list["Candidate"]] = relationship("Candidate", back_populates="job", lazy="selectin", cascade="all, delete-orphan", passive_deletes=True)  # noqa: F821

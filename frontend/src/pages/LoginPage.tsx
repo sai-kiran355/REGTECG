@@ -14,17 +14,20 @@ export function LoginPage() {
   const isFintech = location.pathname.includes('fintech')
   const product = isFintech ? 'fintech' : 'compliance'
 
-  // Already logged in — send to the right dashboard
-  if (isAuthenticated) {
-    const dest = user?.organization_type === 'fintech' ? '/fintech/dashboard' : '/dashboard'
-    return <Navigate to={dest} replace />
-  }
-
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
+
+  // Already logged in — send to the right dashboard only if product type matches the authenticated user
+  if (isAuthenticated && !loading) {
+    const isUserFintech = user?.organization_type === 'fintech'
+    if (isUserFintech === isFintech) {
+      const dest = isUserFintech ? '/fintech/dashboard' : '/dashboard'
+      return <Navigate to={dest} replace />
+    }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

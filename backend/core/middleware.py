@@ -152,6 +152,23 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Extract X-Tenant-ID header.
         tenant_header = request.headers.get("X-Tenant-ID", "").strip()
         if not tenant_header:
+            # Fallback: check query parameter token
+            token = request.query_params.get("token")
+            if not token:
+                # Fallback: check Authorization header
+                auth_header = request.headers.get("Authorization", "")
+                if auth_header.lower().startswith("bearer "):
+                    token = auth_header.split(" ", 1)[1]
+
+            if token:
+                try:
+                    from core.security import verify_access_token
+                    claims = verify_access_token(token)
+                    tenant_header = claims.get("tenant_id", "")
+                except Exception:
+                    pass
+
+        if not tenant_header:
             return _error_response(
                 request,
                 400,

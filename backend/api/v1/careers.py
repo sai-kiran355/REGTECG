@@ -258,7 +258,16 @@ async def apply_for_job(
                     if cand:
                         cand.ai_score = result["score"]
                         cand.ai_summary = result["summary"]
-                        cand.stage = "screening"
+                        
+                        score = result["score"]
+                        if score < 80.0:
+                            cand.stage = "rejected"
+                            gate_note = f"[AI Auto-Filter] Rejected: Match score of {score}% is below the 80% qualification requirement.\nAI Summary: {result['summary']}\nKey Gaps: {', '.join(result.get('gaps', []))}"
+                        else:
+                            cand.stage = "screening"
+                            gate_note = f"[AI Auto-Filter] Shortlisted! Match score of {score}% meets the qualification requirement."
+                        
+                        cand.notes = f"{gate_note}\n\n{cand.notes}" if cand.notes else gate_note
             logger.info("Auto AI screening completed for candidate %s — score: %s", candidate.id, result["score"])
         except Exception as exc:
             logger.warning("Auto AI screening failed for candidate %s: %s", candidate.id, exc)

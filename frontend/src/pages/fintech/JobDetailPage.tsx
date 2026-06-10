@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Upload, Brain, Star, Mail, Phone,
-  BriefcaseBusiness, ChevronDown, FileText, Pencil, Check,
+  BriefcaseBusiness, ChevronDown, FileText, Pencil, Check, Trash2, UserCheck,
 } from 'lucide-react'
 import { recruitmentApi, Job, Candidate, AIScreeningResult, PipelineStats } from '../../api/recruitment'
 import { Spinner } from '../../components/Spinner'
 import { Alert } from '../../components/Alert'
 import { FintechLayout } from './FintechLayout'
+import { useAuthStore } from '../../store/authStore'
 
 const STAGES: { key: Candidate['stage']; label: string; color: string }[] = [
   { key: 'applied',   label: 'Applied',    color: 'bg-gray-100 text-gray-700' },
@@ -38,6 +39,7 @@ export function JobDetailPage() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
   const [screeningResult, setScreeningResult] = useState<AIScreeningResult | null>(null)
   const [screening, setScreening] = useState(false)
+  const [promoting, setPromoting] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
 
   const fetchAll = async () => {
@@ -58,7 +60,33 @@ export function JobDetailPage() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [jobId])
+  useEffect(() => {
+    fetchAll()
+    const interval = setInterval(() => {
+      if (jobId) {
+        Promise.all([
+          recruitmentApi.getJob(jobId),
+          recruitmentApi.listCandidates(jobId, { page_size: 100 }),
+          recruitmentApi.getPipelineStats(jobId),
+        ]).then(([j, c, s]) => {
+          setJob(j)
+          setCandidates(c.items)
+          setStats(s)
+          // If the currently selected candidate's stage/details were updated in the background (e.g. by AI), refresh selectedCandidate state
+          if (selectedCandidate) {
+            const updated = c.items.find(item => item.id === selectedCandidate.id)
+            if (updated && JSON.stringify(updated) !== JSON.stringify(selectedCandidate)) {
+              setSelectedCandidate(updated)
+            }
+          }
+        }).catch(err => {
+          console.debug("Background fetch failed", err)
+        })
+      }
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [jobId, selectedCandidate])
 
   const handleStageChange = async (candidate: Candidate, stage: string) => {
     try {
@@ -90,6 +118,34 @@ export function JobDetailPage() {
       }
     } finally {
       setScreening(false)
+    }
+  }
+
+  const handleDeleteCandidate = async (candidate: Candidate) => {
+    if (!confirm('Are you sure you want to delete this applicant?')) return
+    try {
+      await recruitmentApi.deleteCandidate(candidate.id)
+      setCandidates(prev => prev.filter(c => c.id !== candidate.id))
+      setSelectedCandidate(null)
+      setScreeningResult(null)
+      const s = await recruitmentApi.getPipelineStats(jobId!)
+      setStats(s)
+    } catch {
+      setError('Failed to delete candidate.')
+    }
+  }
+
+  const handlePromote = async (candidate: Candidate) => {
+    setPromoting(true)
+    setError(null)
+    try {
+      await recruitmentApi.promoteCandidate(candidate.id)
+      navigate('/fintech/employees')
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail?.message ?? 'Failed to onboard candidate to employees.'
+      setError(msg)
+    } finally {
+      setPromoting(false)
     }
   }
 
@@ -186,7 +242,12 @@ export function JobDetailPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{c.full_name}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {c.full_name}
+                        {c.ai_score !== null && c.ai_score < 80 && c.stage === 'rejected' && (
+                          <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" title="Auto-filtered by AI" />
+                        )}
+                      </p>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{c.current_title ?? c.email}</p>
                       {c.current_company && (
                         <p className="text-xs text-gray-400 truncate">{c.current_company}</p>
@@ -222,6 +283,9 @@ export function JobDetailPage() {
                 screening={screening}
                 onScreen={() => handleScreen(selectedCandidate)}
                 onStageChange={(stage) => handleStageChange(selectedCandidate, stage)}
+                onDelete={() => handleDeleteCandidate(selectedCandidate)}
+                onPromote={() => handlePromote(selectedCandidate)}
+                promoting={promoting}
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-64 rounded-2xl border border-gray-100 bg-white">
@@ -254,7 +318,7 @@ export function JobDetailPage() {
 // ── Candidate Detail Panel ────────────────────────────────────────────────────
 
 function CandidateDetailPanel({
-  candidate, screeningResult, screening, onScreen, onStageChange,
+  candidate, screeningResult, screening, onScreen, onStageChange, onDelete, onPromote, promoting,
 }: {
   candidate: Candidate
   job: Job
@@ -262,6 +326,9 @@ function CandidateDetailPanel({
   screening: boolean
   onScreen: () => void
   onStageChange: (stage: string) => void
+  onDelete: () => void
+  onPromote: () => void
+  promoting: boolean
 }) {
   const [movingStage, setMovingStage] = useState(false)
 
@@ -271,11 +338,52 @@ function CandidateDetailPanel({
     setMovingStage(false)
   }
 
-  const resumeUrl = recruitmentApi.getResumeUrl(candidate.id)
+  const { accessToken } = useAuthStore()
+  const resumeUrl = `${recruitmentApi.getResumeUrl(candidate.id)}${accessToken ? `?token=${accessToken}` : ''}`
   const currentStageConfig = STAGES.find(s => s.key === candidate.stage)
+
+  const isAutoFiltered = candidate.stage === 'rejected' && candidate.ai_score !== null && candidate.ai_score < 80
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+      {/* Candidate hired banner */}
+      {candidate.stage === 'hired' && (
+        <div className="bg-green-50 border-b border-green-100 px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-green-500 shrink-0 animate-pulse" />
+            <p className="text-xs font-semibold text-green-800">
+              This candidate has been hired! Ready to onboard them to the active employee directory.
+            </p>
+          </div>
+          <button
+            onClick={onPromote}
+            disabled={promoting}
+            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {promoting ? <Spinner size="sm" /> : <UserCheck className="h-3.5 w-3.5" />}
+            Onboard to Employees
+          </button>
+        </div>
+      )}
+
+      {/* Auto-filtered warning banner */}
+      {isAutoFiltered && (
+        <div className="bg-red-50 border-b border-red-100 px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+            <p className="text-xs font-semibold text-red-800">
+              AI Auto-Filter: Match score ({candidate.ai_score}%) did not meet the 80% requirement.
+            </p>
+          </div>
+          <button
+            onClick={() => handleMove('screening')}
+            disabled={movingStage}
+            className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            Override Rejection
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-gray-100 p-6">
         <div className="flex items-start justify-between gap-4">
@@ -359,6 +467,21 @@ function CandidateDetailPanel({
           className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50">
           {screening ? <Spinner size="sm" /> : <Brain className="h-3.5 w-3.5" />}
           {screening ? 'Screening...' : 'AI Screen'}
+        </button>
+
+        {/* Onboard to Employees */}
+        {candidate.stage === 'hired' && (
+          <button onClick={onPromote} disabled={promoting}
+            className="flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-50">
+            {promoting ? <Spinner size="sm" /> : <UserCheck className="h-3.5 w-3.5" />}
+            Onboard to Employees
+          </button>
+        )}
+
+        {/* Delete Applicant */}
+        <button onClick={onDelete}
+          className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors ml-auto">
+          <Trash2 className="h-3.5 w-3.5" /> Delete Applicant
         </button>
       </div>
 

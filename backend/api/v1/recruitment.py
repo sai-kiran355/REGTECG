@@ -31,12 +31,15 @@ from crud.recruitment import (
     create_job, get_job_by_id, list_jobs, update_job, delete_job,
     create_candidate, get_candidate_by_id, list_candidates,
     update_candidate, save_resume, get_resume, get_pipeline_stats,
+    delete_candidate,
+    list_employees, get_employee_by_id, create_employee, update_employee, delete_employee,
 )
 from schemas.auth import JWTClaims
 from schemas.recruitment import (
     JobCreate, JobUpdate, JobResponse, JobListResponse,
     CandidateCreate, CandidateStageUpdate, CandidateResponse,
     CandidateListResponse, PipelineStats, AIScreeningResponse,
+    EmployeeCreate, EmployeeUpdate, EmployeeResponse, EmployeeListResponse, EmployeeStatusStats,
 )
 
 logger = logging.getLogger(__name__)
@@ -289,6 +292,21 @@ async def update_stage_endpoint(
     return _candidate_to_response(candidate, has_resume=candidate.resume is not None)
 
 
+@router.delete("/candidates/{candidate_id}", status_code=200)
+async def delete_candidate_endpoint(
+    candidate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:write")),
+) -> dict:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    candidate = await get_candidate_by_id(db, candidate_id, tenant_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Candidate not found."})
+    await delete_candidate(db, candidate)
+    await db.commit()
+    return {"message": "Candidate deleted successfully."}
+
+
 @router.post("/candidates/{candidate_id}/screen", response_model=AIScreeningResponse)
 async def screen_candidate_endpoint(
     candidate_id: uuid.UUID,
@@ -331,11 +349,22 @@ async def screen_candidate_endpoint(
         )
 
     # Persist score and summary
+    score = result["score"]
+    if score < 80.0:
+        new_stage = "rejected"
+        gate_note = f"[AI Auto-Filter] Rejected: Match score of {score}% is below the 80% qualification requirement.\nAI Summary: {result['summary']}\nKey Gaps: {', '.join(result.get('gaps', []))}"
+    else:
+        new_stage = "screening" if candidate.stage in ("applied", "rejected") else candidate.stage
+        gate_note = f"[AI Auto-Filter] Shortlisted! Match score of {score}% meets the qualification requirement."
+
+    notes = f"{gate_note}\n\n{candidate.notes}" if candidate.notes else gate_note
+
     await update_candidate(
         db, candidate,
-        ai_score=result["score"],
+        ai_score=score,
         ai_summary=result["summary"],
-        stage="screening" if candidate.stage == "applied" else candidate.stage,
+        stage=new_stage,
+        notes=notes,
     )
     await db.commit()
 
@@ -386,6 +415,133 @@ async def pipeline_stats_endpoint(
 
 # ── Gemini AI screening ───────────────────────────────────────────────────────
 
+def _extract_text_from_binary(data: bytes) -> str:
+    """Extract printable text from binary bytes using pypdf or docx2txt where appropriate."""
+    import io
+
+    # Try pypdf for PDF
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(data))
+        text_parts = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                text_parts.append(text)
+        if text_parts:
+            extracted = "\n".join(text_parts).strip()
+            if extracted:
+                return extracted.lower()
+    except Exception as e:
+        logger.debug("pypdf parsing failed: %s", e)
+
+    # Try docx2txt for docx
+    try:
+        import docx2txt
+        text = docx2txt.process(io.BytesIO(data))
+        if text and text.strip():
+            return text.lower()
+    except Exception as e:
+        logger.debug("docx2txt parsing failed: %s", e)
+
+    # Fallback to general alphanumeric word extractor (for plain text files or raw stream fallback)
+    import re
+    try:
+        decoded = data.decode("utf-8", errors="ignore")
+    except Exception:
+        decoded = data.decode("latin-1", errors="ignore")
+    words = re.findall(r'[a-zA-Z0-9+#-]{2,20}', decoded)
+    return " ".join(words).lower()
+
+
+
+def _run_local_fallback_screening(
+    resume_bytes: bytes,
+    job_title: str,
+    job_requirements: str,
+    job_description: str,
+) -> dict:
+    """
+    Fallback keyword-matching screen when GEMINI_API_KEY is not set.
+    Focuses on job requirements and title to provide an accurate technical keyword match score.
+    """
+    import re
+
+    # Extract text from resume bytes
+    resume_text = _extract_text_from_binary(resume_bytes)
+
+    # Focus keyword extraction only on job title and job requirements (ignore description fluff)
+    job_text = f"{job_title} {job_requirements}".lower()
+
+    # Clean and split into individual keywords (ignore stop words, keep technical terms/skills)
+    raw_keywords = re.findall(r'[a-zA-Z0-9+#-]{2,20}', job_text)
+
+    STOP_WORDS = {
+        "and", "the", "for", "with", "from", "that", "this", "your", "will", "have",
+        "has", "are", "our", "their", "must", "about", "would", "should", "could",
+        "experience", "skills", "required", "role", "team", "work", "job", "position",
+        "description", "requirements", "candidate", "candidates", "ability", "responsibilities",
+        "we", "us", "you", "who", "what", "how", "why", "can", "may", "be", "is", "am", "are",
+        "was", "were", "been", "being", "do", "does", "did", "done", "doing", "a", "an",
+        "but", "or", "as", "if", "because", "as", "until", "while", "of", "at", "by", "on",
+        "to", "in", "out", "into", "through", "over", "under", "above", "below", "up", "down",
+        "degree", "years", "year", "month", "months", "working", "strong", "excellent",
+        "good", "great", "nice", "plus", "preferred", "closely", "other", "others", "all",
+        "any", "both", "each", "few", "more", "most", "some", "such", "no", "nor", "not",
+        "only", "own", "same", "so", "than", "too", "very", "full", "stack", "developer",
+        "engineer", "development", "systems", "solutions", "building", "designing", "scaling"
+    }
+
+    keywords = {w for w in raw_keywords if w not in STOP_WORDS and len(w) > 2}
+
+    if not keywords:
+        # Fallback in case of empty keywords
+        keywords = {"developer", "manager", "engineer", "designer", "officer"}
+
+    matched = []
+    for kw in keywords:
+        # Match keyword only as a complete word (not a substring of another word, e.g., 'java' shouldn't match 'javascript')
+        pattern = r'(?<![a-zA-Z0-9])' + re.escape(kw) + r'(?![a-zA-Z0-9])'
+        if re.search(pattern, resume_text):
+            matched.append(kw)
+
+    score = (len(matched) / len(keywords)) * 100.0 if keywords else 0.0
+
+    # Map score to standard recommendations
+    if score >= 80.0:
+        recommendation = "strong_yes"
+    elif score >= 60.0:
+        recommendation = "yes"
+    elif score >= 40.0:
+        recommendation = "maybe"
+    else:
+        recommendation = "no"
+
+    # Generate list of strengths (matched keywords)
+    strengths = [m.upper() for m in matched[:5]]
+    if not strengths:
+        strengths = ["BASIC APPLICATION SUBMITTED"]
+
+    # Generate list of gaps (unmatched keywords)
+    gaps = [w.upper() for w in keywords if w not in matched][:3]
+    if not gaps:
+        gaps = ["NO IMMEDIATE GAPS IDENTIFIED"]
+
+    summary = (
+        f"AI Fallback Evaluation (Offline Mode). Candidate matched {len(matched)} out of {len(keywords)} "
+        f"job profile keywords. Identified strengths include: {', '.join(strengths)}. "
+        f"Recommendation is based on keyword match density."
+    )
+
+    return {
+        "score": round(score, 1),
+        "summary": summary,
+        "strengths": strengths,
+        "gaps": gaps,
+        "recommendation": recommendation,
+    }
+
+
 async def _run_gemini_screening(
     resume_bytes: bytes,
     resume_content_type: str,
@@ -404,7 +560,13 @@ async def _run_gemini_screening(
 
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable not set.")
+        logger.info("GEMINI_API_KEY not set — using local fallback keyword-matching screening agent.")
+        return _run_local_fallback_screening(
+            resume_bytes=resume_bytes,
+            job_title=job_title,
+            job_requirements=job_requirements,
+            job_description=job_description,
+        )
 
     # Encode resume as base64
     resume_b64 = base64.b64encode(resume_bytes).decode("utf-8")
@@ -485,3 +647,174 @@ Be objective, specific, and base your assessment only on what is in the resume v
         "gaps": list(result.get("gaps", [])),
         "recommendation": recommendation,
     }
+
+
+# ── Employees ─────────────────────────────────────────────────────────────────
+
+@router.get("/employees", response_model=EmployeeListResponse)
+async def list_employees_endpoint(
+    search: str | None = None,
+    department: str | None = None,
+    status: str | None = None,
+    page: int = 1,
+    page_size: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:read")),
+) -> EmployeeListResponse:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    items, total = await list_employees(
+        db, tenant_id, search=search, department=department, status=status, page=page, page_size=page_size
+    )
+    return EmployeeListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/employees/stats", response_model=EmployeeStatusStats)
+async def employee_stats_endpoint(
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:read")),
+) -> EmployeeStatusStats:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    from sqlalchemy import select, func
+    from models.employee import Employee
+
+    # Simple count query
+    query = select(Employee.status, func.count(Employee.id)).where(
+        Employee.tenant_id == tenant_id
+    ).group_by(Employee.status)
+    res = await db.execute(query)
+    status_counts = {row[0]: row[1] for row in res.all()}
+
+    # KYC status query for flagged count
+    kyc_query = select(func.count(Employee.id)).where(
+        Employee.tenant_id == tenant_id,
+        Employee.kyc_status == "flagged"
+    )
+    flagged_count = (await db.execute(kyc_query)).scalar_one()
+
+    total = sum(status_counts.values())
+    return EmployeeStatusStats(
+        total=total,
+        active=status_counts.get("active", 0),
+        onboarding=status_counts.get("onboarding", 0),
+        flagged=flagged_count,
+    )
+
+
+@router.get("/employees/{employee_id}", response_model=EmployeeResponse)
+async def get_employee_endpoint(
+    employee_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:read")),
+) -> EmployeeResponse:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    employee = await get_employee_by_id(db, employee_id, tenant_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+    return employee
+
+
+@router.post("/employees", response_model=EmployeeResponse, status_code=201)
+async def create_employee_endpoint(
+    body: EmployeeCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:write")),
+) -> EmployeeResponse:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    employee = await create_employee(
+        db,
+        tenant_id=tenant_id,
+        full_name=body.full_name,
+        email=body.email,
+        phone=body.phone,
+        department=body.department,
+        job_title=body.job_title,
+        status=body.status,
+        kyc_status=body.kyc_status,
+        manager_name=body.manager_name,
+        hire_date=body.hire_date,
+    )
+    await db.commit()
+    await db.refresh(employee)
+    return employee
+
+
+@router.put("/employees/{employee_id}", response_model=EmployeeResponse)
+async def update_employee_endpoint(
+    employee_id: uuid.UUID,
+    body: EmployeeUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:write")),
+) -> EmployeeResponse:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    employee = await get_employee_by_id(db, employee_id, tenant_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+
+    updates = body.model_dump(exclude_unset=True)
+    employee = await update_employee(db, employee, **updates)
+    await db.commit()
+    await db.refresh(employee)
+    return employee
+
+
+@router.delete("/employees/{employee_id}", status_code=200)
+async def delete_employee_endpoint(
+    employee_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:write")),
+) -> dict:
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    employee = await get_employee_by_id(db, employee_id, tenant_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Employee not found."})
+    await delete_employee(db, employee)
+    await db.commit()
+    return {"message": "Employee deleted successfully."}
+
+
+@router.post("/candidates/{candidate_id}/promote", response_model=EmployeeResponse, status_code=201)
+async def promote_candidate_endpoint(
+    candidate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:write")),
+) -> EmployeeResponse:
+    """Promote a hired candidate to an onboarding employee, copying their profile details."""
+    import datetime
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    candidate = await get_candidate_by_id(db, candidate_id, tenant_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Candidate not found."})
+
+    # Verify candidate has been hired
+    if candidate.stage != "hired":
+        candidate.stage = "hired"
+
+    # Fetch job department
+    dept = candidate.job.department if candidate.job else "Engineering"
+    title = candidate.job.title if candidate.job else "Developer"
+
+    # Create the employee
+    employee = await create_employee(
+        db,
+        tenant_id=tenant_id,
+        full_name=candidate.full_name,
+        email=candidate.email,
+        phone=candidate.phone,
+        department=dept,
+        job_title=title,
+        status="onboarding",  # Start them as onboarding
+        kyc_status="pending",  # Start KYC as pending
+    )
+
+    # Record audit log note
+    candidate.notes = f"[ATS Promoted] Promoted to Employee directory on {datetime.date.today().isoformat()}.\n\n{candidate.notes}" if candidate.notes else f"[ATS Promoted] Promoted to Employee directory."
+
+    await db.commit()
+    await db.refresh(employee)
+    return employee
+
