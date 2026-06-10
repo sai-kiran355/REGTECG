@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { useAuthStore } from '../store/authStore'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost')
   ? import.meta.env.VITE_API_BASE_URL
@@ -76,15 +77,9 @@ function createApiClient(): AxiosInstance {
             )
             const { access_token, refresh_token: newRefresh } = res.data
 
-            // Update persisted store
+            // Update persisted store and in-memory Zustand state
             try {
-              const raw = localStorage.getItem('regtech-auth')
-              if (raw) {
-                const stored = JSON.parse(raw)
-                stored.state.accessToken = access_token
-                stored.state.refreshToken = newRefresh
-                localStorage.setItem('regtech-auth', JSON.stringify(stored))
-              }
+              useAuthStore.getState().setTokens(access_token, newRefresh)
             } catch { /* ignore */ }
 
             processQueue(access_token)
@@ -92,7 +87,7 @@ function createApiClient(): AxiosInstance {
             return instance(originalRequest)
           } catch {
             // Refresh failed — clear auth and redirect to product selector
-            localStorage.removeItem('regtech-auth')
+            useAuthStore.getState().logout()
             window.location.href = '/login'
             return Promise.reject(error)
           } finally {
@@ -101,15 +96,9 @@ function createApiClient(): AxiosInstance {
         }
 
         // No refresh token available — log out
-        localStorage.removeItem('regtech-auth')
+        const orgType = useAuthStore.getState().user?.organization_type ?? ''
+        useAuthStore.getState().logout()
         // Redirect to last known product login or selector
-        const orgType = (() => {
-          try {
-            const raw = localStorage.getItem('regtech-auth')
-            if (raw) return JSON.parse(raw)?.state?.user?.organization_type ?? ''
-          } catch { return '' }
-          return ''
-        })()
         window.location.href = orgType === 'fintech' ? '/login/fintech' : '/login/compliance'
       }
 

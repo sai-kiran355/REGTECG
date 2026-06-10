@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,8 +75,8 @@ async def clock_in_endpoint(
         id=log.id,
         tenant_id=log.tenant_id,
         employee_id=log.employee_id,
-        clock_in=log.clock_in,
-        clock_out=log.clock_out,
+        clock_in=log.clock_in.replace(tzinfo=timezone.utc) if log.clock_in.tzinfo is None else log.clock_in,
+        clock_out=log.clock_out.replace(tzinfo=timezone.utc) if (log.clock_out and log.clock_out.tzinfo is None) else log.clock_out,
         latitude=log.latitude,
         longitude=log.longitude,
         geo_status=log.geo_status,
@@ -115,8 +115,8 @@ async def clock_out_endpoint(
         id=log.id,
         tenant_id=log.tenant_id,
         employee_id=log.employee_id,
-        clock_in=log.clock_in,
-        clock_out=log.clock_out,
+        clock_in=log.clock_in.replace(tzinfo=timezone.utc) if log.clock_in.tzinfo is None else log.clock_in,
+        clock_out=log.clock_out.replace(tzinfo=timezone.utc) if (log.clock_out and log.clock_out.tzinfo is None) else log.clock_out,
         latitude=log.latitude,
         longitude=log.longitude,
         geo_status=log.geo_status,

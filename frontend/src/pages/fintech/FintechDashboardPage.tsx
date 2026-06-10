@@ -43,7 +43,7 @@ const modules = [
     icon: Wallet,
     color: 'bg-orange-600',
     route: '/fintech/payroll',
-    badge: 'Coming Soon',
+    badge: 'Active',
     features: ['Auto Payroll', 'Salary Slips', 'TDS Computation', 'PF & ESI Compliance'],
   },
   {

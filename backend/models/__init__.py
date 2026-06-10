@@ -17,10 +17,12 @@ from models.applicant_account import ApplicantAccount
 from models.chat_message import ChatMessage
 from models.employee import Employee
 from models.attendance import AttendanceLog, LeaveRequest, ShiftSchedule
+from models.payroll import SalaryStructure, PayrollLog
 
 __all__ = [
     "Tenant", "Role", "RolePermission", "User",
     "Case", "KYCRecord", "AMLAlert", "SanctionsScreening", "AuditLog",
     "KYCDocument", "ApplicantAccount", "ChatMessage", "Employee",
     "AttendanceLog", "LeaveRequest", "ShiftSchedule",
+    "SalaryStructure", "PayrollLog",
 ]

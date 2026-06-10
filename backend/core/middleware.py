@@ -168,7 +168,14 @@ class TenantMiddleware(BaseHTTPMiddleware):
                     claims = verify_access_token(token)
                     tenant_header = claims.get("tenant_id", "")
                 except Exception:
-                    pass
+                    # Fallback: get claims without validation (e.g. if token expired)
+                    # to resolve tenant schema. Endpoint dependencies will enforce validation.
+                    try:
+                        from jose import jwt
+                        claims = jwt.get_unverified_claims(token)
+                        tenant_header = claims.get("tenant_id", "")
+                    except Exception:
+                        pass
 
         if not tenant_header:
             return _error_response(
