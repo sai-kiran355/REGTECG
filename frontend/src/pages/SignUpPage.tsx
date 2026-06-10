@@ -9,7 +9,11 @@ import { useAuthStore } from '../store/authStore'
 import { Alert } from '../components/Alert'
 import { Spinner } from '../components/Spinner'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost')
+  ? import.meta.env.VITE_API_BASE_URL
+  : (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+      ? `http://${window.location.hostname}:8000`
+      : 'http://localhost:8000')
 
 const PRODUCTS = [
   {

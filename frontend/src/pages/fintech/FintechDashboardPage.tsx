@@ -34,7 +34,7 @@ const modules = [
     icon: CalendarDays,
     color: 'bg-green-600',
     route: '/fintech/attendance',
-    badge: 'Coming Soon',
+    badge: 'Active',
     features: ['Face Recognition', 'GPS Geo-Fencing', 'Shift Scheduling', 'Leave Management'],
   },
   {

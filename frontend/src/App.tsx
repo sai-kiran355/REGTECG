@@ -33,6 +33,7 @@ import { JobFormPage } from './pages/fintech/JobFormPage'
 import { JobDetailPage } from './pages/fintech/JobDetailPage'
 import { EmployeesPage } from './pages/fintech/EmployeesPage'
 import { OnboardingPortalPage } from './pages/fintech/OnboardingPortalPage'
+import { AttendancePage } from './pages/fintech/AttendancePage'
 import { CareersJobsPage } from './pages/careers/CareersJobsPage'
 import { CareersApplyPage } from './pages/careers/CareersApplyPage'
 import { CareersStatusPage } from './pages/careers/CareersStatusPage'
@@ -98,6 +99,7 @@ export default function App() {
           <Route path="/fintech/jobs/:jobId"      element={<JobDetailPage />} />
           <Route path="/fintech/jobs/:jobId/edit" element={<JobFormPage />} />
           <Route path="/fintech/employees"        element={<EmployeesPage />} />
+          <Route path="/fintech/attendance"       element={<AttendancePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

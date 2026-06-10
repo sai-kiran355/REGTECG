@@ -15,7 +15,7 @@ const NAV = [
   { path: '/fintech/dashboard',   icon: Layers,           label: 'Dashboard' },
   { path: '/fintech/jobs',        icon: BriefcaseBusiness, label: 'Recruitment & ATS' },
   { path: '/fintech/employees',   icon: Users,            label: 'Employees' },
-  { path: '/fintech/attendance',  icon: CalendarDays,     label: 'Attendance',  soon: true },
+  { path: '/fintech/attendance',  icon: CalendarDays,     label: 'Attendance' },
   { path: '/fintech/payroll',     icon: Wallet,           label: 'Payroll',     soon: true },
   { path: '/fintech/analytics',   icon: BarChart3,        label: 'Analytics',   soon: true },
   { path: '/fintech/integrations',icon: Globe,            label: 'Integrations',soon: true },

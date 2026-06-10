@@ -3,6 +3,18 @@
  */
 import { apiClient } from './client'
 
+const getApiBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl
+  }
+  const host = window.location.hostname
+  if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    return `http://${host}:8000`
+  }
+  return envUrl ?? 'http://localhost:8000'
+}
+
 export interface Job {
   id: string
   tenant_id: string
@@ -136,7 +148,7 @@ export const recruitmentApi = {
     apiClient.post<AIScreeningResult>(`/api/v1/recruitment/candidates/${id}/screen`).then(r => r.data),
 
   getResumeUrl: (id: string) =>
-    `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}/api/v1/recruitment/candidates/${id}/resume`,
+    `${getApiBaseUrl()}/api/v1/recruitment/candidates/${id}/resume`,
 
   getPipelineStats: (jobId?: string) =>
     apiClient.get<PipelineStats>('/api/v1/recruitment/pipeline', { params: jobId ? { job_id: jobId } : {} }).then(r => r.data),
@@ -177,7 +189,7 @@ export const recruitmentApi = {
   },
 
   getEmployeeDocUrl: (id: string, docType: string, download?: boolean) => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+    const baseUrl = getApiBaseUrl()
     const query = download ? '?download=true' : ''
     return `${baseUrl}/api/v1/recruitment/employees/${id}/download-doc/${docType}${query}`
   },
