@@ -176,6 +176,18 @@ class TenantMiddleware(BaseHTTPMiddleware):
                         tenant_header = claims.get("tenant_id", "")
                     except Exception:
                         pass
+            else:
+                # Fallback: check for X-API-Key header
+                x_api_key = request.headers.get("X-API-Key", "").strip()
+                if x_api_key:
+                    try:
+                        from crud.integration import verify_api_key
+                        async with AsyncSessionLocal() as session:
+                            key = await verify_api_key(session, x_api_key)
+                            if key:
+                                tenant_header = str(key.tenant_id)
+                    except Exception:
+                        pass
 
         if not tenant_header:
             return _error_response(

@@ -49,22 +49,35 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def get_current_user(
     authorization: str | None = Header(default=None, alias="Authorization"),
     token: str | None = Query(default=None),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     redis: aioredis.Redis = Depends(get_redis),
+    db: AsyncSession = Depends(get_db),
 ) -> JWTClaims:
     """
-    Validate the Bearer JWT and return the decoded claims.
-
-    Raises
-    ------
-    HTTPException 401 MISSING_TOKEN
-        If no Authorization header is present.
-    HTTPException 401 MALFORMED_TOKEN
-        If the token is structurally invalid or has a bad signature.
-    HTTPException 401 TOKEN_EXPIRED
-        If the token's exp claim is in the past.
-    HTTPException 401 TOKEN_REVOKED
-        If the token's jti is in the Redis blacklist.
+    Validate the Bearer JWT or developer X-API-Key, and return the claims context.
     """
+    if x_api_key:
+        from crud.integration import verify_api_key
+        key = await verify_api_key(db, x_api_key)
+        if not key:
+            raise HTTPException(
+                status_code=401,
+                detail={"code": "INVALID_API_KEY", "message": "API key is invalid or expired."},
+            )
+        
+        scopes_list = [s.strip() for s in key.scopes.split(",") if s.strip()]
+        if "*" in scopes_list:
+            permissions = ["cases:read", "cases:write", "employee:read", "employee:write", "recruitment:read", "recruitment:write"]
+        else:
+            permissions = scopes_list
+
+        return JWTClaims(
+            sub=str(key.id),
+            tenant_id=str(key.tenant_id),
+            role="developer",
+            permissions=permissions,
+        )
+
     from core.security import verify_access_token
     from core.redis import BLACKLIST_PREFIX
 
@@ -74,7 +87,7 @@ async def get_current_user(
         else:
             raise HTTPException(
                 status_code=401,
-                detail={"code": "MISSING_TOKEN", "message": "Authorization header is required."},
+                detail={"code": "MISSING_TOKEN", "message": "Authorization header or X-API-Key is required."},
             )
 
     # Extract Bearer token.
@@ -110,6 +123,7 @@ async def get_current_user(
         )
 
     return JWTClaims.from_dict(claims)
+
 
 
 # ---------------------------------------------------------------------------

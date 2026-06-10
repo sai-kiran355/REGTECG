@@ -36,6 +36,10 @@ import { OnboardingPortalPage } from './pages/fintech/OnboardingPortalPage'
 import { AttendancePage } from './pages/fintech/AttendancePage'
 import { PayrollPage } from './pages/fintech/PayrollPage'
 import { AnalyticsPage } from './pages/fintech/AnalyticsPage'
+import { IntegrationsPage } from './pages/fintech/IntegrationsPage'
+import { FintechSettingsPage } from './pages/fintech/SettingsPage'
+
+
 import { CareersJobsPage } from './pages/careers/CareersJobsPage'
 import { CareersApplyPage } from './pages/careers/CareersApplyPage'
 import { CareersStatusPage } from './pages/careers/CareersStatusPage'
@@ -104,6 +108,10 @@ export default function App() {
           <Route path="/fintech/attendance"       element={<AttendancePage />} />
           <Route path="/fintech/payroll"          element={<PayrollPage />} />
           <Route path="/fintech/analytics"        element={<AnalyticsPage />} />
+          <Route path="/fintech/integrations"     element={<IntegrationsPage />} />
+          <Route path="/fintech/settings"         element={<FintechSettingsPage />} />
+
+
         </Route>
       </Routes>
     </BrowserRouter>

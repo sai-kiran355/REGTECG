@@ -19,6 +19,7 @@ from models.employee import Employee
 from models.attendance import AttendanceLog, LeaveRequest, ShiftSchedule
 from models.payroll import SalaryStructure, PayrollLog
 from models.analytics import PerformanceReview, HeadcountPlan, AttritionPrediction
+from models.integration import IntegrationConfig, ApiKey, WebhookSubscription, WebhookDeliveryLog
 
 __all__ = [
     "Tenant", "Role", "RolePermission", "User",
@@ -27,4 +28,5 @@ __all__ = [
     "AttendanceLog", "LeaveRequest", "ShiftSchedule",
     "SalaryStructure", "PayrollLog",
     "PerformanceReview", "HeadcountPlan", "AttritionPrediction",
+    "IntegrationConfig", "ApiKey", "WebhookSubscription", "WebhookDeliveryLog",
 ]

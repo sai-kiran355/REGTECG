@@ -11,14 +11,14 @@ interface Props {
   children: React.ReactNode
 }
 
-const NAV = [
+const NAV: { path: string; icon: any; label: string; soon?: boolean }[] = [
   { path: '/fintech/dashboard',   icon: Layers,           label: 'Dashboard' },
   { path: '/fintech/jobs',        icon: BriefcaseBusiness, label: 'Recruitment & ATS' },
   { path: '/fintech/employees',   icon: Users,            label: 'Employees' },
   { path: '/fintech/attendance',  icon: CalendarDays,     label: 'Attendance' },
   { path: '/fintech/payroll',     icon: Wallet,           label: 'Payroll' },
   { path: '/fintech/analytics',   icon: BarChart3,        label: 'Analytics' },
-  { path: '/fintech/integrations',icon: Globe,            label: 'Integrations',soon: true },
+  { path: '/fintech/integrations',icon: Globe,            label: 'Integrations' },
 ]
 
 export function FintechLayout({ title, subtitle, children }: Props) {
@@ -34,7 +34,7 @@ export function FintechLayout({ title, subtitle, children }: Props) {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-gray-200 bg-white">
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-gray-200 bg-white">
         {/* Logo */}
         <div className="flex items-center gap-2.5 border-b border-gray-100 px-5 py-5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600">
@@ -97,7 +97,7 @@ export function FintechLayout({ title, subtitle, children }: Props) {
       {/* Main */}
       <div className="flex-1 ml-64 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
           <div>
             <h1 className="text-lg font-bold text-gray-900">{title}</h1>
             {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}

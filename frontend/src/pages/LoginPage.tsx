@@ -86,6 +86,7 @@ export function LoginPage() {
         </Link>
         <Link
           to="/login"
+          replace
           className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Switch product

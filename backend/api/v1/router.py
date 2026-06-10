@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from fastapi import APIRouter
-from api.v1 import aml, audit, auth, cases, chat, health, kyc, profile, sanctions, signup, users_admin, portal, applicant_auth, recruitment, careers, attendance, payroll, analytics
+from api.v1 import aml, audit, auth, cases, chat, health, kyc, profile, sanctions, signup, users_admin, portal, applicant_auth, recruitment, careers, attendance, payroll, analytics, integration
 
 router = APIRouter()
 
@@ -24,3 +24,5 @@ router.include_router(careers.router)
 router.include_router(attendance.router)
 router.include_router(payroll.router)
 router.include_router(analytics.router)
+router.include_router(integration.router)
+

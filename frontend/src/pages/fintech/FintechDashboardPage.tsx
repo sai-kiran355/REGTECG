@@ -61,7 +61,7 @@ const modules = [
     icon: Globe,
     color: 'bg-slate-600',
     route: '/fintech/integrations',
-    badge: 'Coming Soon',
+    badge: 'Active',
     features: ['Slack & Teams', 'Google Workspace', 'REST API Access', 'Webhook Support'],
   },
 ]
