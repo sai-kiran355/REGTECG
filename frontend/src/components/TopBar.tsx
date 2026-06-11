@@ -1,5 +1,5 @@
-import { Bell } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { NotificationBell } from './ui/notification-bell'
 
 interface TopBarProps {
   title: string
@@ -17,9 +17,7 @@ export function TopBar({ title }: TopBarProps) {
             {user.organization_name}
           </span>
         )}
-        <button className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors">
-          <Bell className="h-5 w-5" />
-        </button>
+        <NotificationBell />
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
             {(user?.full_name || user?.sub || 'U')[0].toUpperCase()}

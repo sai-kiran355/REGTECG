@@ -26,6 +26,26 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 settings = Settings()
 
 
+@router.get("/unread-count")
+async def get_total_unread_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("cases:read")),
+) -> dict:
+    """Get the total count of unread applicant messages across all tenant cases."""
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    result = await db.execute(
+        select(ChatMessage)
+        .join(Case, Case.id == ChatMessage.case_id)
+        .where(
+            ChatMessage.tenant_id == tenant_id,
+            ChatMessage.sender_type == "applicant",
+            ChatMessage.is_read == False
+        )
+    )
+    unread_messages = result.scalars().all()
+    return {"unread_count": len(unread_messages)}
+
+
 class SendMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
 
