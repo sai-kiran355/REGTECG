@@ -88,10 +88,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Database connectivity check failed", error=str(exc))
         sys.exit(1)
 
+    # Start AML transaction monitoring simulator
+    from services.aml_simulator import run_background_aml_simulator
+    aml_task = asyncio.create_task(run_background_aml_simulator())
+
     yield
 
     # Shutdown
     logger.info("Shutting down RegTech Compliance OS backend")
+    aml_task.cancel()
     try:
         from core.redis import redis_client as _rc
         await _rc.aclose()

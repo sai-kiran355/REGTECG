@@ -35,12 +35,12 @@ export function KYCPage() {
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; name: string } | null>(null)
 
-  const fetchRecords = () => {
-    setLoading(true)
+  const fetchRecords = (silent = false) => {
+    if (!silent) setLoading(true)
     kycApi.list({ status: filterStatus || undefined, page: 1, page_size: 20 })
       .then(data => { setRecords(data.items); setTotal(data.total) })
       .catch(() => setError('Failed to load KYC records.'))
-      .finally(() => setLoading(false))
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
   const fetchCounts = () => {
@@ -54,7 +54,15 @@ export function KYCPage() {
     ).catch(() => null)
   }
 
-  useEffect(() => { fetchRecords(); fetchCounts() }, [filterStatus])
+  useEffect(() => {
+    fetchRecords(false)
+    fetchCounts()
+    const interval = setInterval(() => {
+      fetchRecords(true)
+      fetchCounts()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [filterStatus])
 
   const handleCreate = async () => {
     setCreating(true)

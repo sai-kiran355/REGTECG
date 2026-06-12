@@ -25,6 +25,7 @@ export function ApplicantChatPage() {
 
   const [messages, setMessages] = useState<Message[]>([])
   const [caseNumber, setCaseNumber] = useState('')
+  const [caseStatus, setCaseStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
@@ -53,6 +54,7 @@ export function ApplicantChatPage() {
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
       }
       setCaseNumber(r.data.case_number || '')
+      setCaseStatus(r.data.case_status || null)
     } catch (err: any) {
       setOnline(false)
       setLoadError(err?.response?.data?.error?.message ?? 'Failed to load messages.')
@@ -145,6 +147,26 @@ export function ApplicantChatPage() {
         </div>
       </header>
 
+      {caseStatus === 'in_review' && (
+        <div className="mx-4 mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start justify-between gap-3 shadow-sm shrink-0">
+          <div className="flex gap-2.5">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Action Required: Document Verification</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                The compliance team has requested corrections or document re-uploads.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(`/apply/reupload?case=${caseId}&tenant=${tenantSlug}`)}
+            className="shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 transition-colors shadow-sm"
+          >
+            Re-upload Document
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading ? (
@@ -165,6 +187,25 @@ export function ApplicantChatPage() {
         ) : (
           messages.map(msg => {
             const isApplicant = msg.sender_type === 'applicant'
+            const lowerMsg = msg.message.toLowerCase()
+            const isReuploadRequest = !isApplicant && (
+              lowerMsg.includes('re-upload') ||
+              lowerMsg.includes('reupload') ||
+              (lowerMsg.includes('upload') && lowerMsg.includes('please')) ||
+              lowerMsg.includes('verification failed')
+            )
+            
+            let docParam = ''
+            if (lowerMsg.includes('aadhaar back')) {
+              docParam = 'aadhaar_back'
+            } else if (lowerMsg.includes('aadhaar front') || lowerMsg.includes('aadhaar')) {
+              docParam = 'aadhaar_front'
+            } else if (lowerMsg.includes('pan card') || lowerMsg.includes('pan')) {
+              docParam = 'pan_card'
+            } else if (lowerMsg.includes('selfie') || lowerMsg.includes('photo')) {
+              docParam = 'selfie'
+            }
+
             return (
               <div key={msg.id} className={`flex ${isApplicant ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${isApplicant
@@ -174,6 +215,14 @@ export function ApplicantChatPage() {
                     {isApplicant ? 'You' : msg.sender_name}
                   </p>
                   <p className="text-sm leading-relaxed">{msg.message}</p>
+                  {isReuploadRequest && (
+                    <button
+                      onClick={() => navigate(`/apply/reupload?case=${caseId}&tenant=${tenantSlug}${docParam ? `&doc=${docParam}` : ''}`)}
+                      className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-1.5 transition-colors shadow-sm"
+                    >
+                      Re-upload Document
+                    </button>
+                  )}
                   <p className={`text-xs mt-1 ${isApplicant ? 'text-blue-200' : 'text-gray-400'}`}>
                     {new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </p>

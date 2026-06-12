@@ -108,3 +108,13 @@ async def update_aml_alert(
     await db.flush()
     await db.refresh(alert)
     return alert
+
+
+async def delete_aml_alert(
+    db: AsyncSession,
+    alert: AMLAlert,
+) -> None:
+    """Delete and remove an AMLAlert from database."""
+    await db.delete(alert)
+    await db.flush()
+

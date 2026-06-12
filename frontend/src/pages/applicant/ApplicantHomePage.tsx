@@ -49,13 +49,18 @@ export function ApplicantHomePage() {
       navigate(`/apply/login${tenantSlug ? `?tenant=${tenantSlug}` : ''}`)
       return
     }
-    axios.get(`${BASE_URL}/api/v1/applicant/applications`, {
-      headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug },
-    })
-      .then(r => setApps(r.data.applications || []))
-      .catch(() => null)
-      .finally(() => setLoading(false))
-  }, [isAuthenticated])
+    const loadApplications = () => {
+      axios.get(`${BASE_URL}/api/v1/applicant/applications`, {
+        headers: { Authorization: `Bearer ${accessToken}`, 'X-Tenant-ID': tenantSlug },
+      })
+        .then(r => setApps(r.data.applications || []))
+        .catch(() => null)
+        .finally(() => setLoading(false))
+    }
+    loadApplications()
+    const interval = setInterval(loadApplications, 5000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated, tenantSlug, accessToken, navigate])
 
   const handleLogout = () => {
     logout()
@@ -103,7 +108,7 @@ export function ApplicantHomePage() {
         </div>
 
         {/* Rejection banners */}
-        {apps.filter(a => a.kyc_status === 'rejected').map(app => (
+        {apps.filter(app => app.kyc_status === 'rejected' && !apps.some(a => new Date(a.submitted_at) > new Date(app.submitted_at))).map(app => (
           <div key={`reject-${app.reference_number}`}
             className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
             <XCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
@@ -123,7 +128,7 @@ export function ApplicantHomePage() {
         ))}
 
         {/* Action Required banners for in_review applications */}
-        {apps.filter(a => a.status === 'in_review').map(app => (
+        {apps.filter(a => a.status === 'in_review' || a.kyc_status === 'in_review').map(app => (
           <div key={`banner-${app.reference_number}`}
             className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />

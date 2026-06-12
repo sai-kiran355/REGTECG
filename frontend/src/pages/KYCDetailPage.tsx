@@ -22,22 +22,39 @@ const DOC_LABELS: Record<string, string> = {
   selfie: 'Selfie',
 }
 
-function DocumentViewer({ kycId, docType, label }: { kycId: string; docType: string; label: string }) {
+function DocumentViewer({ kycId, docType, label, updatedAt }: { kycId: string; docType: string; label: string; updatedAt?: string }) {
   const [url, setUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    let active = true
+    let currentUrl: string | null = null
+    setLoading(true)
+    setError(false)
+
     // Fetch the document as a blob using the authenticated API client
     apiClient.get(`/api/v1/portal/documents/${kycId}/${docType}`, { responseType: 'blob' })
       .then(r => {
-        const objectUrl = URL.createObjectURL(r.data)
-        setUrl(objectUrl)
+        if (!active) return
+        currentUrl = URL.createObjectURL(r.data)
+        setUrl(prevUrl => {
+          if (prevUrl) URL.revokeObjectURL(prevUrl)
+          return currentUrl
+        })
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [kycId, docType])
+      .catch(() => {
+        if (active) setError(true)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+      if (currentUrl) URL.revokeObjectURL(currentUrl)
+    }
+  }, [kycId, docType, updatedAt])
 
   return (
     <div className="flex flex-col gap-2">
@@ -78,10 +95,15 @@ export function KYCDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    kycApi.get(id)
-      .then(setRecord)
-      .catch(() => setError('Failed to load KYC record.'))
-      .finally(() => setLoading(false))
+    const loadRecord = (silent = false) => {
+      kycApi.get(id)
+        .then(setRecord)
+        .catch(() => setError('Failed to load KYC record.'))
+        .finally(() => { if (!silent) setLoading(false) })
+    }
+    loadRecord(false)
+    const interval = setInterval(() => loadRecord(true), 5000)
+    return () => clearInterval(interval)
   }, [id])
 
   const handleReview = async (status: string) => {
@@ -275,7 +297,7 @@ export function KYCDetailPage() {
         </div>
         <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
           {Object.entries(DOC_LABELS).map(([key, label]) => (
-            <DocumentViewer key={key} kycId={record.id} docType={key} label={label} />
+            <DocumentViewer key={key} kycId={record.id} docType={key} label={label} updatedAt={record.updated_at} />
           ))}
         </div>
       </div>

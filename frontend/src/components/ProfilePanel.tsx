@@ -4,6 +4,8 @@ import { apiClient } from '../api/client'
 import { Spinner } from './Spinner'
 import { Alert } from './Alert'
 import { Badge } from './Badge'
+import { useAuthStore } from '../store/authStore'
+
 
 interface ProfileData {
   id: string
@@ -64,6 +66,14 @@ export function ProfilePanel({ open, onClose }: ProfilePanelProps) {
     try {
       const r = await apiClient.put('/api/v1/profile', { full_name: fullName })
       setProfile(r.data)
+      // Update global auth store state in real-time
+      const store = useAuthStore.getState()
+      if (store.user) {
+        store.setUser({
+          ...store.user,
+          full_name: r.data.full_name,
+        })
+      }
       setSaveMsg('Profile updated successfully.')
     } catch (err: any) {
       setSaveErr(err?.response?.data?.detail?.message ?? 'Failed to update profile.')

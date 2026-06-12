@@ -30,10 +30,15 @@ export function CaseDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    casesApi.get(id)
-      .then(setCaseData)
-      .catch(() => setError('Failed to load case details.'))
-      .finally(() => setLoading(false))
+    const loadCase = (silent = false) => {
+      casesApi.get(id)
+        .then(setCaseData)
+        .catch(() => setError('Failed to load case details.'))
+        .finally(() => { if (!silent) setLoading(false) })
+    }
+    loadCase(false)
+    const interval = setInterval(() => loadCase(true), 5000)
+    return () => clearInterval(interval)
   }, [id])
 
   const handleStatusChange = async (newStatus: string) => {

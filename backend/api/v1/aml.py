@@ -22,6 +22,7 @@ from crud.aml import (
     get_aml_alert_by_id,
     list_aml_alerts,
     update_aml_alert,
+    delete_aml_alert,
 )
 from schemas.aml import (
     AMLAlertCreate,
@@ -40,7 +41,7 @@ async def list_alerts_endpoint(
     alert_type: str | None = Query(default=None),
     case_id: uuid.UUID | None = Query(default=None),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
     current_user: JWTClaims = Depends(require_permission("aml:read")),
 ) -> AMLAlertListResponse:
@@ -147,3 +148,33 @@ async def update_alert_endpoint(
     await db.commit()
     await db.refresh(alert)
     return AMLAlertResponse.model_validate(alert)
+
+
+@router.delete("/alerts/{alert_id}", status_code=204)
+async def delete_alert_endpoint(
+    alert_id: uuid.UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: JWTClaims = Depends(require_permission("aml:write")),
+):
+    """Delete an AML alert."""
+    tenant_id = uuid.UUID(current_user.tenant_id)
+    alert = await get_aml_alert_by_id(db, alert_id, tenant_id)
+    if alert is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NOT_FOUND", "message": f"AML alert '{alert_id}' not found."},
+        )
+
+    await delete_aml_alert(db, alert)
+    await log_action(
+        db=db,
+        request=request,
+        current_user=current_user,
+        action="aml.delete",
+        resource_type="aml_alert",
+        resource_id=str(alert.id),
+        details={"entity_name": alert.entity_name, "alert_type": alert.alert_type},
+    )
+    await db.commit()
+    return None

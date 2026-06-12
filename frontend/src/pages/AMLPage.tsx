@@ -75,6 +75,17 @@ export function AMLPage() {
     }
   }
 
+  const handleDeleteAlert = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this AML alert?')) return
+    try {
+      await amlApi.delete(id)
+      fetchAlerts()
+      fetchCounts()
+    } catch {
+      setError('Failed to delete alert.')
+    }
+  }
+
   // Aggregate stats from current page for avg score and total amount
   const avgScore = alerts.length ? Math.round(alerts.reduce((s, a) => s + a.risk_score, 0) / alerts.length) : 0
   const totalAmount = alerts.reduce((s, a) => s + Number(a.amount), 0)
@@ -185,14 +196,26 @@ export function AMLPage() {
                   <td className="px-4 py-3"><Badge variant={statusColors[a.status]} className="capitalize">{a.status.replace('_', ' ')}</Badge></td>
                   <td className="px-4 py-3 text-xs text-gray-500">{new Date(a.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {hasPermission('aml:write') && a.status === 'open' && (
+                    <div className="flex items-center gap-2">
+                      {hasPermission('aml:write') ? (
                         <>
-                          <button onClick={() => handleUpdateStatus(a.id, 'in_review')} className="text-xs font-medium text-blue-600 hover:text-blue-700">Review</button>
-                          <button onClick={() => handleUpdateStatus(a.id, 'closed')} className="text-xs font-medium text-green-600 hover:text-green-700">Close</button>
+                          {a.status === 'open' && (
+                            <button onClick={() => handleUpdateStatus(a.id, 'in_review')} className="text-xs font-medium text-blue-600 hover:text-blue-700">Review</button>
+                          )}
+                          {(a.status === 'open' || a.status === 'in_review') && (
+                            <>
+                              <button onClick={() => handleUpdateStatus(a.id, 'closed')} className="text-xs font-medium text-green-600 hover:text-green-700">Close</button>
+                              <button onClick={() => handleUpdateStatus(a.id, 'false_positive')} className="text-xs font-medium text-gray-500 hover:text-gray-600">False Positive</button>
+                            </>
+                          )}
+                          {(a.status === 'closed' || a.status === 'false_positive') && (
+                            <button onClick={() => handleUpdateStatus(a.id, 'open')} className="text-xs font-medium text-amber-600 hover:text-amber-700">Reopen</button>
+                          )}
+                          <button onClick={() => handleDeleteAlert(a.id)} className="text-xs font-medium text-red-600 hover:text-red-700 ml-2">Delete</button>
                         </>
+                      ) : (
+                        <span className="text-xs text-gray-400 capitalize">{a.status.replace('_', ' ')}</span>
                       )}
-                      {a.status !== 'open' && <span className="text-xs text-gray-400 capitalize">{a.status.replace('_', ' ')}</span>}
                     </div>
                   </td>
                 </tr>

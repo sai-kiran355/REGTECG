@@ -50,12 +50,22 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       setTokens: (access, refresh) => {
-        const user = parseJwt(access)
-        set({ accessToken: access, refreshToken: refresh, user, isAuthenticated: true })
+        const parsed = parseJwt(access)
+        const currentUser = get().user
+        const mergedUser = parsed ? {
+          ...currentUser,
+          ...parsed,
+          full_name: currentUser?.full_name || parsed.full_name,
+          email: currentUser?.email || parsed.email,
+          organization_name: currentUser?.organization_name || parsed.organization_name,
+          organization_type: currentUser?.organization_type || parsed.organization_type,
+          tenant_slug: currentUser?.tenant_slug || parsed.tenant_slug,
+        } : null
+        set({ accessToken: access, refreshToken: refresh, user: mergedUser, isAuthenticated: true })
         // Auto-set tenantSlug from JWT — no manual input needed
-        if (user?.tenant_id) {
+        if (parsed?.tenant_id) {
           // Store tenant_id as the slug reference (resolved from JWT)
-          set({ tenantSlug: user.tenant_id })
+          set({ tenantSlug: parsed.tenant_id })
         }
       },
 

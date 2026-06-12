@@ -46,8 +46,21 @@ export function Sidebar() {
     item => item.permission === null || hasPermission(item.permission),
   )
 
-  // Get initials from user sub (first char) as fallback
-  const initials = user?.sub?.[0]?.toUpperCase() ?? 'U'
+  // Get initials from user full name or email
+  const getInitials = () => {
+    if (user?.full_name) {
+      const parts = user.full_name.trim().split(/\s+/)
+      if (parts.length > 0) {
+        return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+      }
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase()
+    }
+    return 'U'
+  }
+  const initials = getInitials()
+
 
   return (
     <>

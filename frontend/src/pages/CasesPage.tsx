@@ -32,8 +32,8 @@ export function CasesPage() {
   const [creating, setCreating] = useState(false)
   const [newCase, setNewCase] = useState({ subject_name: '', subject_type: 'individual', case_type: 'aml', risk_level: 'medium', description: '' })
 
-  const fetchCases = async () => {
-    setLoading(true)
+  const fetchCases = async (silent = false) => {
+    if (!silent) setLoading(true)
     setError(null)
     try {
       const data = await casesApi.list({
@@ -47,11 +47,15 @@ export function CasesPage() {
     } catch {
       setError('Failed to load cases.')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
-  useEffect(() => { fetchCases() }, [filterStatus, filterType, page])
+  useEffect(() => {
+    fetchCases(false)
+    const interval = setInterval(() => fetchCases(true), 5000)
+    return () => clearInterval(interval)
+  }, [filterStatus, filterType, page])
 
   const handleCreate = async () => {
     setCreating(true)

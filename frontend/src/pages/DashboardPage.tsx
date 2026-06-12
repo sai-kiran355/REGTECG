@@ -25,25 +25,30 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch recent cases for the table (5 rows)
-    const recentFetch = casesApi.list({ page: 1, page_size: 5 })
-      .then(data => { setCases(data.items); setTotal(data.total) })
+    const loadDashboardData = () => {
+      // Fetch recent cases for the table (5 rows)
+      const recentFetch = casesApi.list({ page: 1, page_size: 5 })
+        .then(data => { setCases(data.items); setTotal(data.total) })
 
-    // Fetch accurate counts for stats by status/risk
-    const openFetch = casesApi.list({ status: 'open', page: 1, page_size: 1 })
-      .then(data => setOpenCount(data.total))
-    const reviewFetch = casesApi.list({ status: 'in_review', page: 1, page_size: 1 })
-      .then(data => setInReviewCount(data.total))
-    // high + critical — fetch both and sum
-    const highFetch = casesApi.list({ risk_level: 'high', page: 1, page_size: 1 })
-      .then(data => data.total)
-    const criticalFetch = casesApi.list({ risk_level: 'critical', page: 1, page_size: 1 })
-      .then(data => data.total)
+      // Fetch accurate counts for stats by status/risk
+      const openFetch = casesApi.list({ status: 'open', page: 1, page_size: 1 })
+        .then(data => setOpenCount(data.total))
+      const reviewFetch = casesApi.list({ status: 'in_review', page: 1, page_size: 1 })
+        .then(data => setInReviewCount(data.total))
+      // high + critical — fetch both and sum
+      const highFetch = casesApi.list({ risk_level: 'high', page: 1, page_size: 1 })
+        .then(data => data.total)
+      const criticalFetch = casesApi.list({ risk_level: 'critical', page: 1, page_size: 1 })
+        .then(data => data.total)
 
-    Promise.all([recentFetch, openFetch, reviewFetch, highFetch, criticalFetch])
-      .then(([, , , high, critical]) => setHighRiskCount(high + critical))
-      .catch(() => null)
-      .finally(() => setLoading(false))
+      Promise.all([recentFetch, openFetch, reviewFetch, highFetch, criticalFetch])
+        .then(([, , , high, critical]) => setHighRiskCount(high + critical))
+        .catch(() => null)
+        .finally(() => setLoading(false))
+    }
+    loadDashboardData()
+    const interval = setInterval(loadDashboardData, 5000)
+    return () => clearInterval(interval)
   }, [])
 
   const today = new Date().toLocaleDateString('en-IN', {

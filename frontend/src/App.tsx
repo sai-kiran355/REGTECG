@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { LandingPage } from './pages/LandingPage'
 import { ProductSelectPage } from './pages/ProductSelectPage'
+import { InfoPage } from './pages/InfoPage'
 import { OnboardingPage } from './pages/portal/OnboardingPage'
 import { PortalStatus } from './pages/portal/PortalStatus'
 import { ApplicantLoginPage } from './pages/applicant/ApplicantLoginPage'
@@ -50,6 +51,7 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/info/:topic" element={<InfoPage />} />
         <Route path="/login" element={<ProductSelectPage />} />
         <Route path="/login/compliance" element={<LoginPage />} />
         <Route path="/login/fintech" element={<LoginPage />} />

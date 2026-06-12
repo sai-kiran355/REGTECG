@@ -43,7 +43,7 @@ async def list_kyc_endpoint(
     risk_level: str | None = Query(default=None),
     case_id: uuid.UUID | None = Query(default=None),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
     current_user: JWTClaims = Depends(require_permission("kyc:read")),
 ) -> KYCListResponse:

@@ -38,12 +38,12 @@ export function Hero() {
           <div className="flex gap-4 flex-col max-w-4xl">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 leading-tight">
               <span>Automated Compliance for</span>
-              <span className="relative flex w-full justify-center overflow-hidden text-center h-[52px] md:h-[72px] lg:h-[88px] mt-2 text-blue-600">
+              <span className="relative flex w-full justify-center overflow-hidden text-center h-[62px] md:h-[82px] lg:h-[98px] mt-2 text-blue-600 pb-2">
                 &nbsp;
                 {titles.map((title, index) => (
                   <motion.span
                     key={index}
-                    className="absolute font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600"
+                    className="absolute font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 pb-2 leading-none"
                     initial={{ opacity: 0, y: 50 }}
                     transition={{ type: "spring", stiffness: 80, damping: 15 }}
                     animate={

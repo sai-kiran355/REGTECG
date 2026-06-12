@@ -20,7 +20,18 @@ export function TopBar({ title }: TopBarProps) {
         <NotificationBell />
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-            {(user?.full_name || user?.sub || 'U')[0].toUpperCase()}
+            {(() => {
+              if (user?.full_name) {
+                const parts = user.full_name.trim().split(/\s+/)
+                if (parts.length > 0) {
+                  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+                }
+              }
+              if (user?.email) {
+                return user.email[0].toUpperCase()
+              }
+              return 'U'
+            })()}
           </div>
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-gray-900 leading-tight">

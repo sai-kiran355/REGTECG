@@ -221,114 +221,152 @@ function EcosystemSection() {
   )
 }
 
-// ── Features (Display Cards Layout) ──────────────────────────────────────────
+// ── Features (DisplayCards — White Cards, Dark Section) ─────────────────────
 function FeaturesSection() {
-  const bankFeatures = [
+  const bankCards = [
     {
-      icon: <FileSearch className="size-5 text-blue-600 animate-pulse" />,
+      icon: <FileSearch className="size-4 text-blue-600" />,
       title: "AI KYC Verification",
-      description: "Parse credentials instantly via OCR checks.",
+      description: "Parse Aadhaar, PAN & passports via OCR",
       date: "KYC Cockpit",
-      iconClassName: "bg-blue-100 text-blue-600 border border-blue-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] hover:-translate-y-12 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-gray-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/40 grayscale hover:before:opacity-0 hover:grayscale-0 before:left-0 before:top-0 transition-all duration-500",
+      iconClassName: "bg-blue-50 border border-blue-100/80 text-blue-600",
+      titleClassName: "text-slate-800",
     },
     {
-      icon: <AlertTriangle className="size-5 text-amber-600 animate-bounce" />,
+      icon: <AlertTriangle className="size-4 text-amber-600" />,
       title: "AML Detection Logs",
-      description: "Real-time alerts for system transfer anomalies.",
+      description: "Real-time anomalous transfer alerts",
       date: "Transaction Screen",
-      iconClassName: "bg-amber-100 text-amber-600 border border-amber-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] translate-x-12 translate-y-8 hover:-translate-y-4 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-gray-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/40 grayscale hover:before:opacity-0 hover:grayscale-0 before:left-0 before:top-0 transition-all duration-500",
+      iconClassName: "bg-amber-50 border border-amber-100/80 text-amber-600",
+      titleClassName: "text-slate-800",
     },
     {
-      icon: <Shield className="size-5 text-emerald-600" />,
+      icon: <Shield className="size-4 text-emerald-600" />,
       title: "Sanctions Scanners",
-      description: "PEP list mapping using smart phonetics.",
+      description: "OFAC & PEP phonetic name matching",
       date: "Lists Reviewer",
-      iconClassName: "bg-emerald-100 text-emerald-600 border border-emerald-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] translate-x-24 translate-y-16 hover:translate-y-6 transition-all duration-500",
+      iconClassName: "bg-emerald-50 border border-emerald-100/80 text-emerald-600",
+      titleClassName: "text-slate-800",
     },
   ]
 
-  const fintechFeatures = [
+  const fintechCards = [
     {
-      icon: <ClipboardList className="size-5 text-indigo-600 animate-pulse" />,
+      icon: <ClipboardList className="size-4 text-indigo-600" />,
       title: "Frictionless Onboarding",
-      description: "Self-service candidate portals on mobile.",
+      description: "Self-service portals with Aadhaar e-KYC",
       date: "Workforce Directory",
-      iconClassName: "bg-indigo-100 text-indigo-600 border border-indigo-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] hover:-translate-y-12 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-gray-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/40 grayscale hover:before:opacity-0 hover:grayscale-0 before:left-0 before:top-0 transition-all duration-500",
+      iconClassName: "bg-indigo-50 border border-indigo-100/80 text-indigo-600",
+      titleClassName: "text-slate-800",
     },
     {
-      icon: <Zap className="size-5 text-cyan-600" />,
+      icon: <Zap className="size-4 text-cyan-600" />,
       title: "GPS Geofence Tracking",
-      description: "Logs attendance and clock-ins at the office.",
+      description: "Auto clock-in at designated coordinates",
       date: "Coordinates Validator",
-      iconClassName: "bg-cyan-100 text-cyan-600 border border-cyan-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] translate-x-12 translate-y-8 hover:-translate-y-4 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-gray-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/40 grayscale hover:before:opacity-0 hover:grayscale-0 before:left-0 before:top-0 transition-all duration-500",
+      iconClassName: "bg-cyan-50 border border-cyan-100/80 text-cyan-600",
+      titleClassName: "text-slate-800",
     },
     {
-      icon: <BarChart3 className="size-5 text-purple-600" />,
+      icon: <BarChart3 className="size-4 text-purple-600" />,
       title: "Automated Payroll Run",
-      description: "Finalize salary lists and generate payslips.",
+      description: "EPF/TDS calculation & payslip release",
       date: "Disbursal Engine",
-      iconClassName: "bg-purple-100 text-purple-600 border border-purple-200",
-      titleClassName: "text-gray-900",
-      className: "[grid-area:stack] translate-x-24 translate-y-16 hover:translate-y-6 transition-all duration-500",
+      iconClassName: "bg-purple-50 border border-purple-100/80 text-purple-600",
+      titleClassName: "text-slate-800",
     },
   ]
 
   return (
-    <section id="features" className="py-24 px-6 bg-slate-900 relative overflow-hidden">
-      {/* Background matrix dot elements */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-      
+    <section
+      id="features"
+      className="py-24 px-6 bg-slate-900 relative overflow-hidden"
+    >
+      {/* Background matrix */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      {/* Ambient glows */}
+      <div className="absolute -top-12 left-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-12 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+
       <div className="mx-auto max-w-7xl relative z-10">
+        {/* Section Header */}
         <div className="text-center mb-20">
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-3">Key Features Directory</p>
-          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Ecosystem Architecture Features</h2>
-          <p className="mt-4 text-slate-400 max-w-xl mx-auto text-sm">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-bold uppercase tracking-widest text-blue-400 mb-4 shadow-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+            Key Features Directory
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-200 tracking-tight leading-tight">
+            Ecosystem Architecture Features
+          </h2>
+          <p className="mt-4 text-slate-400 max-w-xl mx-auto text-sm md:text-base leading-relaxed">
             TFG ComplianceOS provides unique services for both banking regulatory platforms and fintech internal suites.
           </p>
         </div>
 
-        {/* Display Cards Deck Side-by-Side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 pt-6">
-          
-          {/* Bank Stack Left */}
-          <div className="flex flex-col items-center bg-slate-950/40 border border-slate-800/50 p-8 rounded-3xl min-h-[420px] justify-between shadow-inner">
-            <div className="text-center mb-8">
-              <span className="rounded-full bg-blue-900/60 border border-blue-800/50 px-3 py-1 text-[10px] font-bold text-blue-300 uppercase tracking-widest">
-                Bank RegTech Suite
-              </span>
-              <h3 className="text-xl font-bold text-white mt-3">Compliance Verification Features</h3>
-              <p className="text-slate-400 text-xs mt-1.5 max-w-sm">
-                Real-time checks and auditor-ready dashboards built to maintain bank standards.
-              </p>
+        {/* Two Platform Panels Side-by-Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+          {/* ── Bank RegTech Suite ── */}
+          <div className="relative rounded-3xl border border-slate-800 bg-slate-950/40 backdrop-blur-sm px-8 pt-8 pb-8 flex flex-col gap-6 overflow-visible hover:border-blue-500/30 hover:bg-slate-950/70 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(59,130,246,0.04)] group">
+            {/* Glowing Accent Top Line */}
+            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-blue-500/50 via-blue-500/10 to-transparent" />
+            
+            <div className="flex items-center justify-between pb-5 border-b border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/20 shadow-inner">
+                  <Shield className="h-4 w-4 text-blue-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block">Bank RegTech Suite</span>
+                  <h3 className="text-sm font-bold text-white leading-tight">Compliance Verification Features</h3>
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full bg-slate-900/50">3 Services Active</span>
             </div>
-            <div className="w-full flex items-center justify-center h-52 pb-10">
-              <DisplayCards cards={bankFeatures} />
+
+            {/* DisplayCards stacked deck */}
+            <div className="flex items-center justify-center min-h-[300px] md:min-h-[320px] pt-4 w-full">
+              <DisplayCards cards={bankCards} />
+            </div>
+
+            {/* Panel Footer */}
+            <div className="mt-auto pt-5 border-t border-slate-900 flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-medium">Verify sandbox APIs</span>
+              <span className="text-xs font-bold text-blue-400 hover:text-blue-300 group-hover:translate-x-1 transition-transform flex items-center gap-1 cursor-pointer">
+                Access Sandbox &rarr;
+              </span>
             </div>
           </div>
 
-          {/* Fintech Stack Right */}
-          <div className="flex flex-col items-center bg-slate-950/40 border border-slate-800/50 p-8 rounded-3xl min-h-[420px] justify-between shadow-inner">
-            <div className="text-center mb-8">
-              <span className="rounded-full bg-indigo-900/60 border border-indigo-800/50 px-3 py-1 text-[10px] font-bold text-indigo-300 uppercase tracking-widest">
-                Fintech Operations Hub
-              </span>
-              <h3 className="text-xl font-bold text-white mt-3">HR Ops & Platform Capabilities</h3>
-              <p className="text-slate-400 text-xs mt-1.5 max-w-sm">
-                Employee onboarding trackers, GPS coordinate alerts, and automated payroll runs.
-              </p>
+          {/* ── Fintech Operations Hub ── */}
+          <div className="relative rounded-3xl border border-slate-800 bg-slate-950/40 backdrop-blur-sm px-8 pt-8 pb-8 flex flex-col gap-6 overflow-visible hover:border-indigo-500/30 hover:bg-slate-950/70 transition-all duration-500 hover:shadow-[0_20px_50px_rgba(99,102,241,0.04)] group">
+            {/* Glowing Accent Top Line */}
+            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-indigo-500/50 via-indigo-500/10 to-transparent" />
+            
+            <div className="flex items-center justify-between pb-5 border-b border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20 shadow-inner">
+                  <BarChart3 className="h-4 w-4 text-indigo-400" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Fintech Operations Hub</span>
+                  <h3 className="text-sm font-bold text-white leading-tight">HR Ops & Platform Capabilities</h3>
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-500 border border-slate-800 px-2 py-0.5 rounded-full bg-slate-900/50">Disbursal Ready</span>
             </div>
-            <div className="w-full flex items-center justify-center h-52 pb-10">
-              <DisplayCards cards={fintechFeatures} />
+
+            {/* DisplayCards stacked deck */}
+            <div className="flex items-center justify-center min-h-[300px] md:min-h-[320px] pt-4 w-full">
+              <DisplayCards cards={fintechCards} />
+            </div>
+
+            {/* Panel Footer */}
+            <div className="mt-auto pt-5 border-t border-slate-900 flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-medium">Configure operations</span>
+              <span className="text-xs font-bold text-indigo-400 hover:text-indigo-300 group-hover:translate-x-1 transition-transform flex items-center gap-1 cursor-pointer">
+                Launch Hub &rarr;
+              </span>
             </div>
           </div>
 
@@ -337,10 +375,6 @@ function FeaturesSection() {
     </section>
   )
 }
-
-
-
-
 
 // ── CTASection ───────────────────────────────────────────────────────────────
 function CTASection() {
@@ -351,14 +385,14 @@ function CTASection() {
       
       <div className="mx-auto max-w-4xl text-center relative z-10">
         <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-5">Ready to Automate Your Verification and Operations?</h2>
-        <p className="text-slate-450 mb-10 text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-semibold text-slate-300">
+        <p className="mb-10 text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-semibold text-slate-300 font-medium">
           Join 200+ financial firms using TFG ComplianceOS. Setup your developer keys and workforce sandbox dashboard in minutes.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link to="/signup" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-base font-bold text-white hover:bg-blue-700 transition-all hover:shadow-lg active:scale-95 duration-150">
             Start Free Trial <ArrowRight className="h-5 w-5" />
           </Link>
-          <a href="mailto:sales@complianceos.in" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-white px-8 py-4 text-base font-bold hover:bg-slate-750 transition-colors">
+          <a href="mailto:sales@complianceos.in" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 text-white px-8 py-4 text-base font-bold hover:bg-slate-700/60 transition-colors">
             Talk to Sales
           </a>
         </div>
@@ -400,13 +434,23 @@ function Footer() {
             <div key={col.title} className="space-y-3 text-left">
               <p className="text-xs font-bold text-white uppercase tracking-wider">{col.title}</p>
               <ul className="space-y-2">
-                {col.links.map(l => (
-                  <li key={l}>
-                    <a href="#" className="text-xs hover:text-white transition-colors font-medium">
-                      {l}
-                    </a>
-                  </li>
-                ))}
+                {col.links.map(l => {
+                  const slug = l
+                    .toLowerCase()
+                    .replace(/ & /g, "-")
+                    .replace(/ /g, "-")
+                    .replace(/[^a-z0-9-]/g, "");
+                  return (
+                    <li key={l}>
+                      <Link
+                        to={`/info/${slug}`}
+                        className="text-xs hover:text-white transition-colors font-medium text-left"
+                      >
+                        {l}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -421,7 +465,7 @@ function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────

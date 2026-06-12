@@ -48,7 +48,7 @@ def _user_to_response(user: User) -> UserResponse:
 @router.get("/users", response_model=UserListResponse)
 async def list_users_endpoint(
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100),
+    page_size: int = Query(default=20, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
     current_user: JWTClaims = Depends(require_permission("admin:users")),
 ) -> UserListResponse:

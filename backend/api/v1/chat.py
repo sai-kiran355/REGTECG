@@ -196,6 +196,7 @@ async def get_messages_applicant(
 
     return {
         "case_number": case.case_number,
+        "case_status": case.status,
         "messages": [
             {
                 "id": str(m.id),

@@ -154,6 +154,9 @@ export const amlApi = {
 
   update: (id: string, data: Partial<AMLAlert>) =>
     apiClient.put<AMLAlert>(`/api/v1/aml/alerts/${id}`, data).then(r => r.data),
+
+  delete: (id: string) =>
+    apiClient.delete(`/api/v1/aml/alerts/${id}`).then(r => r.data),
 }
 
 // ── Sanctions ─────────────────────────────────────────────────────────────
