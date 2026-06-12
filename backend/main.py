@@ -213,3 +213,6 @@ app.include_router(v1_router, prefix="/api/v1")
 # ── Observability ────────────────────────────────────────────────────────────
 from core.telemetry import setup_telemetry  # noqa: E402
 setup_telemetry(app)
+
+# Force reload backend after middleware updates
+

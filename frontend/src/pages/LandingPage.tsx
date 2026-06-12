@@ -17,6 +17,7 @@ import { Feature } from "../components/ui/feature-with-image-comparison"
 import { StickyFeatureSection } from "../components/ui/sticky-scroll-cards-section"
 import { Pricing } from "../components/ui/pricing-cards"
 import { Testimonials } from "../components/ui/testimonials-columns-1"
+import { LobbyAssistant } from '../components/LobbyAssistant'
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -556,6 +557,7 @@ export function LandingPage() {
       </div>
       <CTASection />
       <Footer />
+      <LobbyAssistant />
     </div>
   )
 }

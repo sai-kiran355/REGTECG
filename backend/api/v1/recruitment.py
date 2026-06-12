@@ -558,7 +558,9 @@ async def _run_gemini_screening(
     import os
     import httpx
 
-    api_key = os.getenv("GEMINI_API_KEY", "")
+    from core.config import Settings
+    settings = Settings()
+    api_key = settings.GEMINI_API_KEY
     if not api_key:
         logger.info("GEMINI_API_KEY not set — using local fallback keyword-matching screening agent.")
         return _run_local_fallback_screening(

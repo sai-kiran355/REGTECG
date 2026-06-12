@@ -131,6 +131,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             "/api/v1/applicant/applications",
             "/api/v1/applicant/me",
             "/api/v1/applicant/banks",
+            "/api/v1/chat/lobby-assistant",
             "/docs",
             "/redoc",
             "/openapi.json",
