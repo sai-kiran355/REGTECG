@@ -570,13 +570,12 @@ async def _run_gemini_screening(
             job_description=job_description,
         )
 
-    # Encode resume as base64
-    resume_b64 = base64.b64encode(resume_bytes).decode("utf-8")
-    mime = resume_content_type if resume_content_type in ("application/pdf",) else "application/pdf"
+    # Extract plain text from the resume bytes
+    resume_text = _extract_text_from_binary(resume_bytes)
 
     prompt = f"""You are an expert technical recruiter and talent acquisition specialist.
 
-Analyze the attached resume for the following job position:
+Analyze the candidate's resume text below for the following job position:
 
 JOB TITLE: {job_title}
 
@@ -586,46 +585,71 @@ JOB DESCRIPTION:
 REQUIREMENTS:
 {job_requirements[:2000]}
 
-Please evaluate the candidate and respond in STRICT JSON format with no additional text:
+CANDIDATE RESUME TEXT:
+{resume_text[:6000]}
 
-{{
-  "score": <number 0-100 representing overall match percentage>,
-  "summary": "<2-3 sentence professional summary of the candidate's fit>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "gaps": ["<gap 1>", "<gap 2>"],
-  "recommendation": "<one of: strong_yes, yes, maybe, no>"
-}}
-
-Be objective, specific, and base your assessment only on what is in the resume vs the requirements."""
+Please evaluate the candidate and respond. Be objective, specific, and base your assessment only on what is in the resume vs the requirements.
+"""
 
     payload = {
         "contents": [
             {
                 "parts": [
-                    {
-                        "inline_data": {
-                            "mime_type": mime,
-                            "data": resume_b64,
-                        }
-                    },
                     {"text": prompt},
                 ]
             }
         ],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 4096,
+            "responseMimeType": "application/json",
+            "responseSchema": {
+                "type": "OBJECT",
+                "properties": {
+                    "score": {"type": "INTEGER"},
+                    "summary": {"type": "STRING"},
+                    "strengths": {
+                        "type": "ARRAY",
+                        "items": {"type": "STRING"}
+                    },
+                    "gaps": {
+                        "type": "ARRAY",
+                        "items": {"type": "STRING"}
+                    },
+                    "recommendation": {
+                        "type": "STRING",
+                        "enum": ["strong_yes", "yes", "maybe", "no"]
+                    }
+                },
+                "required": ["score", "summary", "strengths", "gaps", "recommendation"]
+            },
+            "thinkingConfig": {
+                "thinkingBudget": 0
+            }
         },
+
     }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        logger.warning("Gemini screening failed or rate limited: %s. Falling back to local offline evaluation.", exc)
+        return _run_local_fallback_screening(
+            resume_bytes=resume_bytes,
+            job_title=job_title,
+            job_requirements=job_requirements,
+            job_description=job_description,
+        )
 
     raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    logger.debug("Raw text from Gemini: %s", raw_text)
 
     # Strip markdown code fences if present
     if raw_text.startswith("```"):
